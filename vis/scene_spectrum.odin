@@ -3,12 +3,15 @@ package vis
 import "core:fmt"
 import rl "vendor:raylib"
 
-Scene_Spectrum :: struct {}
+make_scene_spectrum :: proc(params: Params) -> Scene {
+	scene: Scene
+	scene.name = "SPECTRUM"
+	scene.draw = Draw_Scene_Proc(spectrum_draw)
 
-scene_spectrum_init :: proc(state_data: rawptr, params: Params) {
+	return scene
 }
 
-scene_spectrum_draw :: proc(state_data: rawptr, params: Params, texture: rl.RenderTexture2D) {
+spectrum_draw :: proc(data: rawptr, params: Params, texture: rl.RenderTexture2D) {
 	rl.BeginTextureMode(texture)
 	rl.ClearBackground(rl.BLANK)
 	// rl.DrawCircle(params.width / 2, params.height / 2, 30.0, rl.BLUE)
@@ -19,8 +22,4 @@ scene_spectrum_draw :: proc(state_data: rawptr, params: Params, texture: rl.Rend
 		rl.DrawRectangle(i32(idx) * i32(width), rl.GetScreenHeight() - p2, width, p2, rl.BLUE)
 	}
 	rl.EndTextureMode()
-}
-
-scene_spectrum_deinit :: proc(scene_data: rawptr) {
-
 }

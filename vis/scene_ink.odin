@@ -2,44 +2,12 @@ package vis
 
 import "core:fmt"
 import "core:math"
+import "core:math/noise"
+import "core:math/rand"
+import "core:time"
 import rl "vendor:raylib"
 
-Timer :: struct {
-	interval_ms:    f64,
-	prev_tick_time: f64,
-	is_running:     bool,
-}
-
-timer_init :: proc(timer: ^Timer, interval_ms: f64) {
-	timer.interval_ms = interval_ms
-	timer.is_running = false
-}
-
-timer_restart :: proc(timer: ^Timer) {
-	timer.prev_tick_time = rl.GetTime()
-	timer.is_running = true
-}
-
-timer_stop :: proc(timer: ^Timer) {
-	timer.is_running = false
-}
-
-timer_running :: proc(timer: ^Timer) -> bool {
-	return timer.is_running
-}
-
-timer_update :: proc(timer: ^Timer) -> bool {
-	if (timer.is_running) {
-		now := rl.GetTime()
-
-		if (now - timer.prev_tick_time > timer.interval_ms / 1000) {
-			timer.prev_tick_time = now
-			return true
-		}
-	}
-
-	return false
-}
+INK_SCALE :: 3
 
 Scene_Ink_State :: struct {
 	shader:          rl.Shader,
@@ -47,57 +15,55 @@ Scene_Ink_State :: struct {
 	prev_texture:    rl.RenderTexture2D,
 	current_colour:  rl.Vector4,
 	drop_timer:      Timer,
+	angle:           f32,
 }
 
-scene_ink_init :: proc(state_data: rawptr, params: Params) {
-	state := cast(^Scene_Ink_State)(state_data)
+make_scene_ink :: proc(params: Params) -> Scene {
+	scene: Scene
+	scene.name = "INK"
 
+	state := new(Scene_Ink_State)
 	state.shader = rl.LoadShader(nil, "vis/shaders/ink.frag")
-	state.current_texture = rl.LoadRenderTexture(i32(params.width), i32(params.height))
-	state.prev_texture = rl.LoadRenderTexture(i32(params.width), i32(params.height))
+	state.current_texture = rl.LoadRenderTexture(
+		params.width * INK_SCALE,
+		params.height * INK_SCALE,
+	)
+	state.prev_texture = rl.LoadRenderTexture(params.width * INK_SCALE, params.height * INK_SCALE)
 
-	timer_init(&state.drop_timer, 0)
+	state.angle = math.PI / 2
+	c := rand_col_f()
+	state.current_colour = {c.r, c.g, c.b, 1.0}
+
+	timer_init(&state.drop_timer, time.Millisecond * 30)
+
+	scene.data = state
+	scene.draw = Draw_Scene_Proc(scene_ink_draw)
+	scene.deinit = Deinit_Scene_Proc(scene_ink_deinit)
+
+	return scene
 }
 
-resize_render_texture :: proc(texture: ^rl.RenderTexture2D, width: i32, height: i32) {
-	temp := rl.LoadRenderTexture(width, height)
-
-	{
-		rl.BeginTextureMode(temp)
-		defer rl.EndTextureMode()
-
-		source := rl.Rectangle{0, 0, f32(texture.texture.width), f32(texture.texture.height)}
-		rl.DrawTextureRec(texture.texture, source, {0, 0}, rl.WHITE)
-	}
-
-	rl.UnloadRenderTexture(texture^)
-	texture^ = rl.LoadRenderTexture(width, height)
-
-	{
-		rl.BeginTextureMode(texture^)
-		defer rl.EndTextureMode()
-
-		rl.DrawTextureEx(temp.texture, {0, 0}, 0.0, 1.0, rl.WHITE)
-	}
-}
-
-scene_ink_draw :: proc(state_data: rawptr, params: Params, texture: rl.RenderTexture2D) {
-	st8 := cast(^Scene_Ink_State)(state_data)
-
+scene_ink_draw :: proc(st8: ^Scene_Ink_State, params: Params, texture: rl.RenderTexture2D) {
 	if (rl.IsWindowResized()) {
-		resize_render_texture(&st8.current_texture, i32(params.width), i32(params.height))
-		resize_render_texture(&st8.prev_texture, i32(params.width), i32(params.height))
+		resize_render_texture(
+			&st8.current_texture,
+			params.width * INK_SCALE,
+			params.height * INK_SCALE,
+		)
+		resize_render_texture(
+			&st8.prev_texture,
+			params.width * INK_SCALE,
+			params.height * INK_SCALE,
+		)
 	}
 
 	if (!timer_running(&st8.drop_timer)) {
-		timer_restart(&st8.drop_timer)
+		timer_start(&st8.drop_timer)
 	}
 
 	if (params.mouse_pressed) {
-		r := f32(rl.GetRandomValue(0, 255))
-		g := f32(rl.GetRandomValue(0, 255))
-		b := f32(rl.GetRandomValue(0, 255))
-		st8.current_colour = {(r / 255.0), g / 255.0, b / 255.0, 255}
+		c := rand_col_f()
+		st8.current_colour = {c.r, c.g, c.b, 1.0}
 	}
 
 	{
@@ -113,13 +79,36 @@ scene_ink_draw :: proc(state_data: rawptr, params: Params, texture: rl.RenderTex
 			st8.prev_texture.texture,
 		)
 
-		v := i32(
-			rl.IsMouseButtonDown(rl.MouseButton.LEFT) && timer_update(&st8.drop_timer) ? 1 : 0,
-		)
+		v := i32(timer_update(&st8.drop_timer) ? 1 : 0)
+
 		set_shader_uniform(st8.shader, "u_addDrop", v)
 
-		set_shader_uniform(st8.shader, "u_dropPos", params.mouse_pos)
+		old_angle := st8.angle
+		st8.angle += 1 * params.dt
+		st8.angle = math.mod(st8.angle, math.PI * 2)
 
+		set_shader_uniform(st8.shader, "u_dropRadius", params.centroid_smooth * 150.0 * INK_SCALE)
+
+		if (params.mouse_down) {
+			set_shader_uniform(st8.shader, "u_dropPos", params.mouse_pos * INK_SCALE)
+		} else {
+			pos := 400 * lemniscate_gerono(st8.angle) + params.center_f
+
+			NOISE_Y :: 9.0
+			t := rl.GetTime() * 0.5
+
+			nois := rl.Vector2{noise.noise_2d(123, {t, NOISE_Y}), noise.noise_2d(2, {t, NOISE_Y})}
+			pos = pos * INK_SCALE + (nois * 1000 * params.rms_smooth * 8)
+
+			set_shader_uniform(st8.shader, "u_dropPos", pos)
+		}
+
+
+		offset: f32 = math.PI / 2
+		if (st8.angle < old_angle) {
+			c := rand_col_f()
+			st8.current_colour = {c.r, c.g, c.b, 1.0}
+		}
 		set_shader_uniform(st8.shader, "u_dropCol", st8.current_colour)
 
 		rl.DrawRectangle(
@@ -174,10 +163,31 @@ scene_ink_draw :: proc(state_data: rawptr, params: Params, texture: rl.RenderTex
 	}
 }
 
-scene_ink_deinit :: proc(state_data: rawptr) {
-	state := cast(^Scene_Ink_State)(state_data)
-
+scene_ink_deinit :: proc(state: ^Scene_Ink_State) {
 	rl.UnloadShader(state.shader)
 	rl.UnloadRenderTexture(state.current_texture)
 	rl.UnloadRenderTexture(state.prev_texture)
+	free(state)
+}
+
+resize_render_texture :: proc(texture: ^rl.RenderTexture2D, width: i32, height: i32) {
+	temp := rl.LoadRenderTexture(width, height)
+
+	{
+		rl.BeginTextureMode(temp)
+		defer rl.EndTextureMode()
+
+		source := rl.Rectangle{0, 0, f32(texture.texture.width), f32(texture.texture.height)}
+		rl.DrawTextureRec(texture.texture, source, {0, 0}, rl.WHITE)
+	}
+
+	rl.UnloadRenderTexture(texture^)
+	texture^ = rl.LoadRenderTexture(width, height)
+
+	{
+		rl.BeginTextureMode(texture^)
+		defer rl.EndTextureMode()
+
+		rl.DrawTextureEx(temp.texture, {0, 0}, 0.0, 1.0, rl.WHITE)
+	}
 }

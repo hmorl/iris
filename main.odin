@@ -40,10 +40,13 @@ Key_Mapper :: struct {
 	mappings: map[Key_Combo]string,
 }
 
+switch_scene :: "switch_scene_"
+set_input :: "set_input_"
+
 initialize_mappings :: proc(key_mapper: ^Key_Mapper) {
-	key_mapper.mappings[{rl.KeyboardKey.Q, {}}] = "switch_scene_1"
-	key_mapper.mappings[{rl.KeyboardKey.W, {}}] = "switch_scene_2"
-	key_mapper.mappings[{rl.KeyboardKey.E, {}}] = "switch_scene_3"
+	key_mapper.mappings[{rl.KeyboardKey.Q, {}}] = switch_scene + "1"
+	key_mapper.mappings[{rl.KeyboardKey.W, {}}] = switch_scene + "2"
+	key_mapper.mappings[{rl.KeyboardKey.E, {}}] = switch_scene + "3"
 	key_mapper.mappings[{rl.KeyboardKey.R, {}}] = "switch_scene_4"
 	key_mapper.mappings[{rl.KeyboardKey.T, {}}] = "switch_scene_5"
 	key_mapper.mappings[{rl.KeyboardKey.Y, {}}] = "switch_scene_6"
@@ -117,36 +120,17 @@ main :: proc() {
 	vis.init_params(&vis_params, rl.GetScreenWidth(), rl.GetScreenHeight(), audio.BUFFER_SIZE)
 
 	scene_manager: vis.Scene_Manager
+	vis.init_scenes(&scene_manager, vis_params)
+	defer vis.deinit_scenes(&scene_manager)
 
-	circle_scene: vis.Circles_State
-	vis.circles_init(&circle_scene, vis_params)
-	defer vis.circles_deinit(&circle_scene)
-	vis.add_scene(&scene_manager, {vis.circles_draw, &circle_scene})
-
-	test_scene: vis.Scene_Hello_World_State
-	vis.scene_hello_world_init(&test_scene, vis_params)
-	defer vis.circles_deinit(&test_scene)
-	vis.add_scene(&scene_manager, {vis.scene_hello_world_draw, &test_scene})
-
-	ink_scene: vis.Scene_Ink_State
-	vis.scene_ink_init(&ink_scene, vis_params)
-	defer vis.scene_ink_deinit(&ink_scene)
-	vis.add_scene(&scene_manager, {vis.scene_ink_draw, &ink_scene})
-
-	spectrum_scene: vis.Scene_Spectrum
-	vis.scene_spectrum_init(&spectrum_scene, vis_params)
-	defer vis.scene_spectrum_deinit(&spectrum_scene)
-	vis.add_scene(&scene_manager, {vis.scene_spectrum_draw, &spectrum_scene})
-
-	scene_manager.active_scene = slice.first_ptr(scene_manager.scenes[:])
+	scene_manager.active_scene = &scene_manager.scenes[0]
 
 	scene_texture: rl.RenderTexture2D
 	defer rl.UnloadRenderTexture(scene_texture)
 
 	pixelate_shader := rl.LoadShader(nil, "vis/shaders/pixelate.frag")
 	defer rl.UnloadShader(pixelate_shader)
-
-	vis.set_shader_uniform(pixelate_shader, "u_amount", 4)
+	vis.set_shader_uniform(pixelate_shader, "u_amount", 2)
 
 	first_frame := true
 
@@ -163,12 +147,16 @@ main :: proc() {
 
 		buffer := audio_ctx.data.buffers[audio_ctx.data.read_buffer] * f32(state.audio_level)
 
+		spectrum := audio.calc_spectrum(buffer[:], context.temp_allocator)
+		spectrum_a_weighted := audio.calc_a_weighted_spectrum(spectrum, context.temp_allocator)
+
 		vis.update_params(
 			&vis_params,
 			{f32(scene_texture.texture.width), f32(scene_texture.texture.height)},
 			buffer[:],
 			audio.calc_rms(buffer[:]),
-			audio.calc_spectrum(buffer[:]),
+			spectrum_a_weighted,
+			audio.calc_centroid(spectrum_a_weighted),
 		)
 
 		vis.set_shader_uniform(
@@ -180,22 +168,19 @@ main :: proc() {
 		actions := get_triggered_actions(&key_mapper)
 
 		for a in actions {
-			if (strings.has_prefix(a, "set_input_")) {
-				param := strings.trim_prefix(a, "set_input_")
-
-				if (param == "low") {
+			if (strings.has_prefix(a, set_input)) {
+				switch strings.trim_prefix(a, set_input) {
+				case "low":
 					state.audio_level = 0.2
-				} else if (param == "mid") {
+				case "mid":
 					state.audio_level = 0.6
-				} else if (param == "high") {
+				case "high":
 					state.audio_level = 1.0
 				}
-			}
-
-			if (strings.has_prefix(a, "switch_scene_")) {
-				param := strings.trim_prefix(a, "switch_scene_")
-
+			} else if (strings.has_prefix(a, switch_scene)) {
+				param := strings.trim_prefix(a, switch_scene)
 				scene_num, ok := strconv.parse_int(param)
+				assert(ok)
 
 				if (scene_num <= len(scene_manager.scenes)) {
 					scene_manager.active_scene = &scene_manager.scenes[scene_num - 1]
@@ -203,15 +188,15 @@ main :: proc() {
 			}
 		}
 
-		vis.scene_draw(scene_manager.active_scene, vis_params, scene_texture)
+		vis.draw_scene(scene_manager.active_scene, vis_params, scene_texture)
 
 		{
 			rl.BeginDrawing()
 			defer rl.EndDrawing()
 
 			{
-				// rl.BeginShaderMode(pixelate_shader)
-				// defer rl.EndShaderMode()
+				rl.BeginShaderMode(pixelate_shader)
+				defer rl.EndShaderMode()
 
 				rl.ClearBackground(rl.BLACK)
 
@@ -230,5 +215,7 @@ main :: proc() {
 
 			first_frame = false
 		}
+
+		free_all(context.temp_allocator)
 	}
 }

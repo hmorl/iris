@@ -9,7 +9,7 @@ out vec4 fragCol;
 
 void main()
 {
-    // vec2 fragCoord = gl_FragCoord.xy;
-    vec2 st = vec2(ivec2(fragTexCoord * float(u_amount)) + 0.5) / float(u_amount);
-    fragCol = texture(u_texture, st, 0);
+    vec2 texelCoord = fragTexCoord * u_resolution;
+    vec2 downsampled = floor(texelCoord / float(u_amount)) * float(u_amount);
+    fragCol = texelFetch(u_texture, ivec2(downsampled), 0);
 }

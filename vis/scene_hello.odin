@@ -5,10 +5,23 @@ import rl "vendor:raylib"
 
 Scene_Hello_World_State :: struct {}
 
-scene_hello_world_init :: proc(state_data: rawptr, params: Params) {
+make_scene_hello_world :: proc(params: Params) -> Scene {
+	scene: Scene
+
+	scene.name = "helloo"
+	state := new(Scene_Hello_World_State)
+	scene.data = state
+	scene.draw = Draw_Scene_Proc(scene_hello_world_draw)
+	scene.deinit = Deinit_Scene_Proc(scene_hello_world_deinit)
+
+	return scene
 }
 
-scene_hello_world_draw :: proc(state_data: rawptr, params: Params, texture: rl.RenderTexture2D) {
+scene_hello_world_draw :: proc(
+	state_data: ^Scene_Hello_World_State,
+	params: Params,
+	texture: rl.RenderTexture2D,
+) {
 	rl.BeginTextureMode(texture)
 	defer rl.EndTextureMode()
 
@@ -45,6 +58,6 @@ scene_hello_world_draw :: proc(state_data: rawptr, params: Params, texture: rl.R
 	}
 }
 
-scene_hello_world_deinit :: proc(scene_data: rawptr) {
+scene_hello_world_deinit :: proc(scene_data: ^Scene_Hello_World_State) {
 
 }

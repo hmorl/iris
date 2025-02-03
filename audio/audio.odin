@@ -3,6 +3,7 @@ package audio
 import "core:fmt"
 import "core:math"
 import "core:math/cmplx"
+import "core:mem"
 import "core:slice"
 import "core:strings"
 
@@ -40,7 +41,7 @@ init_audio :: proc(ctx: ^Audio_Context) -> bool {
 		return false
 	}
 
-	device_name_filter := "BlackHole"
+	device_name_filter := "Blackhole"
 
 	device_id := slice.first(capture_devices).id
 
@@ -110,7 +111,18 @@ calc_rms :: proc(buffer: []f32) -> f32 {
 	return math.sqrt(sum_squares / f32(len(buffer)))
 }
 
-calc_fft :: proc(input: []complex64) -> []complex64 {
+Audio_Features :: struct {
+	rms:               f32,
+	spectrum:          []f32,
+	spectral_centroid: f32,
+}
+
+calc_features :: proc(buffer: []f32) -> Audio_Features {
+
+	return {{}, calc_spectrum(buffer), {}}
+}
+
+calc_fft :: proc(input: []complex64, allocator := context.temp_allocator) -> []complex64 {
 	size := len(input)
 
 	assert(math.is_power_of_two(size))
@@ -119,18 +131,18 @@ calc_fft :: proc(input: []complex64) -> []complex64 {
 
 	half_size := size / 2
 
-	even := make([]complex64, half_size)
-	odd := make([]complex64, half_size)
+	even := make([]complex64, half_size, allocator)
+	odd := make([]complex64, half_size, allocator)
 
 	for i in 0 ..< half_size {
 		even[i] = input[2 * i]
 		odd[i] = input[2 * i + 1]
 	}
 
-	even_fft := calc_fft(even)
-	odd_fft := calc_fft(odd)
+	even_fft := calc_fft(even, allocator)
+	odd_fft := calc_fft(odd, allocator)
 
-	result := make([]complex64, size)
+	result := make([]complex64, size, allocator)
 
 	for k in 0 ..< half_size {
 		t := odd_fft[k]
@@ -148,29 +160,59 @@ hann_window_coeff :: proc(index, size: int) -> f32 {
 	return 0.5 * (1.0 - math.cos(2.0 * math.PI * f32(index) / f32(size - 1)))
 }
 
-calc_spectrum :: proc(buffer: []f32) -> []f32 {
+calc_a_weighted_spectrum :: proc(spectrum: []f32, allocator := context.temp_allocator) -> []f32 {
+	N := len(spectrum)
+
+	weighted := make([]f32, N, allocator)
+
+	for s, idx in spectrum {
+		freq := f32(idx) * SAMPLE_RATE / f32(N)
+		weighted[idx] = a_weighting(freq) * s
+	}
+
+	return weighted
+}
+
+calc_spectrum :: proc(buffer: []f32, allocator := context.temp_allocator) -> []f32 {
 	N := len(buffer)
 	assert(math.is_power_of_two(N))
 
-	buffer_cmplx := make([]complex64, N)
+	buffer_cmplx := make([]complex64, N, allocator)
+
 	for s, idx in buffer {
 		buffer_cmplx[idx] = complex(s * hann_window_coeff(idx, N), 0.0)
 	}
 
 	fft := calc_fft(buffer_cmplx)
 
-	power_spectrum := make([]f32, len(buffer) / 2)
-	for &s, idx in power_spectrum {
-		freq := f32(idx) * SAMPLE_RATE / f32(len(buffer))
-		s = a_weighting(freq) * cmplx.abs(fft[idx])
+	spectrum := make([]f32, len(buffer) / 2, allocator)
+	for &s, idx in spectrum {
+		s = cmplx.abs(fft[idx])
 	}
 
-	return power_spectrum
+	return spectrum
+}
+
+calc_centroid :: proc(spectrum: []f32) -> f32 {
+	sum: f32 = 0.0
+	sum_weighted: f32 = 0.0
+
+	for bin, i in spectrum {
+		sum += bin
+		sum_weighted += bin * f32(i)
+	}
+
+	if (sum == 0) {
+		return 0.0
+	}
+
+	mean := sum_weighted / sum
+
+	return mean / f32(len(spectrum))
 }
 
 @(private)
 audio_callback :: proc "c" (pDevice: ^ma.device, pOutput, pInput: rawptr, frameCount: u32) {
-	// context = runtime.default_context()
 	user_data := (^Audio_Data)(pDevice.pUserData)
 
 	samples := slice.from_ptr((^f32)(pInput), (int)(frameCount))

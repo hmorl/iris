@@ -1,12 +1,55 @@
 package vis
 
+import "core:slice"
+import "core:strings"
 import rl "vendor:raylib"
+
+Draw_Scene_Proc :: proc(state: rawptr, params: Params, texture: rl.RenderTexture2D)
+Deinit_Scene_Proc :: proc(state: rawptr)
+
+Scene :: struct {
+	name:   string,
+	data:   rawptr,
+	draw:   Draw_Scene_Proc,
+	deinit: Deinit_Scene_Proc,
+}
+
+Scene_Manager :: struct {
+	active_scene: ^Scene,
+	scenes:       [dynamic]Scene,
+}
+
+init_scenes :: proc(manager: ^Scene_Manager, params: Params) {
+	append(&manager.scenes, make_scene_ink(params))
+	append(&manager.scenes, make_scene_example(params))
+	append(&manager.scenes, make_scene_hello_world(params))
+	append(&manager.scenes, make_scene_sketch(params))
+	append(&manager.scenes, make_scene_spectrum(params))
+}
+
+deinit_scenes :: proc(manager: ^Scene_Manager) {
+	for scene in manager.scenes {
+		if (scene.deinit == nil) {
+			assert(scene.data == nil, "No deinit proc for scene data")
+		} else {
+			scene.deinit(scene.data)
+		}
+	}
+}
+
+draw_scene :: proc(scene: ^Scene, params: Params, texture: rl.RenderTexture2D) {
+	assert(scene.draw != nil)
+	scene.draw(scene.data, params, texture)
+}
 
 Params :: struct {
 	width, height:     i32,
 	width_f, height_f: f32,
+	center:            [2]i32,
+	center_f:          [2]f32,
 	mouse_pos:         rl.Vector2,
 	mouse_pressed:     bool,
+	mouse_down:        bool,
 	dt:                f32,
 	audio:             []f32,
 	spectrum:          []f32,
@@ -36,9 +79,12 @@ update_params :: proc(
 	audio_buffer: []f32,
 	rms: f32,
 	spectrum: []f32,
+	centroid: f32,
 ) {
 	params.width, params.height = i32(render_bounds.x), i32(render_bounds.y)
 	params.width_f, params.height_f = render_bounds.x, render_bounds.y
+	params.center_f = {params.width_f / 2.0, params.height_f / 2.0}
+	params.center = {params.width / 2, params.height / 2}
 
 	{
 		w := f32(render_bounds.x)
@@ -61,6 +107,7 @@ update_params :: proc(
 	}
 
 	params.mouse_pressed = rl.IsMouseButtonPressed(rl.MouseButton.LEFT)
+	params.mouse_down = rl.IsMouseButtonDown(rl.MouseButton.LEFT)
 	params.dt = rl.GetFrameTime()
 	params.audio = audio_buffer
 
@@ -72,51 +119,6 @@ update_params :: proc(
 		s = smooth(s, spectrum[idx], 0.2)
 	}
 
-}
-
-Scene :: struct {
-	draw: proc(data: rawptr, params: Params, texture: rl.RenderTexture2D),
-	data: rawptr,
-}
-
-Scene_Manager :: struct {
-	active_scene: ^Scene,
-	scenes:       [dynamic]Scene,
-}
-
-add_scene :: proc(manager: ^Scene_Manager, scene: Scene) {
-	append(&manager.scenes, scene)
-}
-
-scene_draw :: proc(scene: ^Scene, params: Params, texture: rl.RenderTexture2D) {
-	scene.draw(scene.data, params, texture)
-}
-
-Shader_Uniform :: union {
-	i32,
-	f32,
-	rl.Vector2,
-	rl.Color,
-	rl.Vector4,
-}
-
-set_shader_uniform :: proc(shader: rl.Shader, name: cstring, val: Shader_Uniform) {
-	value := val
-	data_type: rl.ShaderUniformDataType
-
-	switch _ in val {
-	case f32:
-		data_type = rl.ShaderUniformDataType.FLOAT
-	case rl.Vector2:
-		data_type = rl.ShaderUniformDataType.VEC2
-	case rl.Vector4:
-		data_type = rl.ShaderUniformDataType.VEC4
-	case i32:
-		data_type = rl.ShaderUniformDataType.INT
-	case rl.Color:
-		data_type = rl.ShaderUniformDataType.IVEC4
-	case:
-	}
-
-	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, name), &value, data_type)
+	params.centroid = centroid
+	params.centroid_smooth = smooth(params.centroid_smooth, centroid, 0.2)
 }
