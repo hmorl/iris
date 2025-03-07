@@ -1,4 +1,4 @@
-package vis
+package iris
 
 import "core:fmt"
 import rl "vendor:raylib"

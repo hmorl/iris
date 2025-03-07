@@ -1,4 +1,4 @@
-package vis
+package iris
 
 import "base:intrinsics"
 import "core:math"

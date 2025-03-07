@@ -1,4 +1,4 @@
-package audio
+package iris
 
 import "core:fmt"
 import "core:math"

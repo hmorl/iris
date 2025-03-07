@@ -1,4 +1,4 @@
-package vis
+package iris
 
 import "core:slice"
 import "core:strings"
@@ -21,7 +21,6 @@ Scene_Manager :: struct {
 
 init_scenes :: proc(manager: ^Scene_Manager, params: Params) {
 	append(&manager.scenes, make_scene_ink(params))
-	append(&manager.scenes, make_scene_example(params))
 	append(&manager.scenes, make_scene_hello_world(params))
 	append(&manager.scenes, make_scene_sketch(params))
 	append(&manager.scenes, make_scene_spectrum(params))

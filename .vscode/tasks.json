@@ -3,15 +3,12 @@
 	"tasks": [
 		{
 			"label": "build debug",
-			"group": "build",
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
 			"type": "shell",
-			"command": "odin build . -debug"
-		},
-		{
-			"label": "build release",
-			"group": "build",
-			"type": "shell",
-			"command": "odin build ."
+			"command": "make debug",
 		},
 	]
 }

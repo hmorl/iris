@@ -1,11 +1,9 @@
-// ▗▖  ▗▖▗▄▄▄▖ ▗▄▄▖▗▄▄▄▖▗▄▄▄▖ ▗▄▄▖▗▖ ▗▖
-// ▐▌  ▐▌  █  ▐▌     █  ▐▌   ▐▌   ▐▌ ▐▌   
-// ▐▌  ▐▌  █   ▝▀▚▖  █  ▐▛▀▀▘▐▌   ▐▛▀▜▌
-//  ▝▚▞▘ ▗▄█▄▖▗▄▄▞▘  █  ▐▙▄▄▖▝▚▄▄▖▐▌ ▐▌
-//
-// == audio visualization technique ==
+//     ⌒     
+//  ┳ ┳┓ ┳ ┏┓ 
+//  ┃ ┣┫ ┃ ┗┓ 
+//  ┻ ┛┗ ┻ ┗┛ 
 
-package main
+package iris
 
 import "core:fmt"
 import "core:math"
@@ -13,9 +11,6 @@ import "core:slice"
 import "core:strconv"
 import "core:strings"
 import rl "vendor:raylib"
-
-import "audio"
-import "vis"
 
 WINDOW_WIDTH :: 1280
 WINDOW_HEIGHT :: 720
@@ -105,32 +100,33 @@ main :: proc() {
 	key_mapper: Key_Mapper
 	initialize_mappings(&key_mapper)
 
+	rl.SetTraceLogLevel(rl.TraceLogLevel.WARNING)
 	rl.SetConfigFlags({.MSAA_4X_HINT, .VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI})
+	rl.SetTargetFPS(TARGET_FPS)
 
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "visualization engine")
 	defer rl.CloseWindow()
 
-	rl.SetTargetFPS(TARGET_FPS)
 
-	audio_ctx: audio.Audio_Context
-	audio.init_audio(&audio_ctx)
-	defer audio.deinit_audio(&audio_ctx)
+	audio_ctx: Audio_Context
+	init_audio(&audio_ctx)
+	defer deinit_audio(&audio_ctx)
 
-	vis_params: vis.Params
-	vis.init_params(&vis_params, rl.GetScreenWidth(), rl.GetScreenHeight(), audio.BUFFER_SIZE)
+	vis_params: Params
+	init_params(&vis_params, rl.GetScreenWidth(), rl.GetScreenHeight(), BUFFER_SIZE)
 
-	scene_manager: vis.Scene_Manager
-	vis.init_scenes(&scene_manager, vis_params)
-	defer vis.deinit_scenes(&scene_manager)
+	scene_manager: Scene_Manager
+	init_scenes(&scene_manager, vis_params)
+	defer deinit_scenes(&scene_manager)
 
 	scene_manager.active_scene = &scene_manager.scenes[0]
 
 	scene_texture: rl.RenderTexture2D
 	defer rl.UnloadRenderTexture(scene_texture)
 
-	pixelate_shader := rl.LoadShader(nil, "vis/shaders/pixelate.frag")
+	pixelate_shader := rl.LoadShader(nil, "shaders/pixelate.frag")
 	defer rl.UnloadShader(pixelate_shader)
-	vis.set_shader_uniform(pixelate_shader, "u_amount", 2)
+	set_shader_uniform(pixelate_shader, "u_amount", 2)
 
 	first_frame := true
 
@@ -140,6 +136,7 @@ main :: proc() {
 	for !rl.WindowShouldClose() {
 		rl.SetWindowTitle(rl.TextFormat("VISTECH (%d fps)", rl.GetFPS()))
 
+
 		if (rl.IsWindowResized() || first_frame) {
 			rl.UnloadRenderTexture(scene_texture)
 			scene_texture = rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
@@ -147,19 +144,19 @@ main :: proc() {
 
 		buffer := audio_ctx.data.buffers[audio_ctx.data.read_buffer] * f32(state.audio_level)
 
-		spectrum := audio.calc_spectrum(buffer[:], context.temp_allocator)
-		spectrum_a_weighted := audio.calc_a_weighted_spectrum(spectrum, context.temp_allocator)
+		spectrum := calc_spectrum(buffer[:], context.temp_allocator)
+		spectrum_a_weighted := calc_a_weighted_spectrum(spectrum, context.temp_allocator)
 
-		vis.update_params(
+		update_params(
 			&vis_params,
 			{f32(scene_texture.texture.width), f32(scene_texture.texture.height)},
 			buffer[:],
-			audio.calc_rms(buffer[:]),
+			calc_rms(buffer[:]),
 			spectrum_a_weighted,
-			audio.calc_centroid(spectrum_a_weighted),
+			calc_centroid(spectrum_a_weighted),
 		)
 
-		vis.set_shader_uniform(
+		set_shader_uniform(
 			pixelate_shader,
 			"u_resolution",
 			rl.Vector2{vis_params.width_f, vis_params.height_f},
@@ -188,7 +185,7 @@ main :: proc() {
 			}
 		}
 
-		vis.draw_scene(scene_manager.active_scene, vis_params, scene_texture)
+		draw_scene(scene_manager.active_scene, vis_params, scene_texture)
 
 		{
 			rl.BeginDrawing()
