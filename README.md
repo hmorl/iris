@@ -5,4 +5,4 @@
  ┻ ┛┗ ┻ ┗┛
 ```
 
-# Iris: a visualization technique for signals & stories\_
+# Iris: a visualization technique for signals & stories
