@@ -44,13 +44,13 @@ initialize_mappings :: proc(key_mapper: ^Key_Mapper) {
 	key_mapper.mappings[{rl.KeyboardKey.Q, {}}] = switch_scene + "1"
 	key_mapper.mappings[{rl.KeyboardKey.W, {}}] = switch_scene + "2"
 	key_mapper.mappings[{rl.KeyboardKey.E, {}}] = switch_scene + "3"
-	key_mapper.mappings[{rl.KeyboardKey.R, {}}] = "switch_scene_4"
-	key_mapper.mappings[{rl.KeyboardKey.T, {}}] = "switch_scene_5"
-	key_mapper.mappings[{rl.KeyboardKey.Y, {}}] = "switch_scene_6"
+	key_mapper.mappings[{rl.KeyboardKey.R, {}}] = switch_scene + "4"
+	key_mapper.mappings[{rl.KeyboardKey.T, {}}] = switch_scene + "5"
+	key_mapper.mappings[{rl.KeyboardKey.Y, {}}] = switch_scene + "6"
 
-	key_mapper.mappings[{rl.KeyboardKey.ONE, {.Ctrl}}] = "set_input_low"
-	key_mapper.mappings[{rl.KeyboardKey.TWO, {.Ctrl}}] = "set_input_mid"
-	key_mapper.mappings[{rl.KeyboardKey.THREE, {.Ctrl}}] = "set_input_high"
+	key_mapper.mappings[{rl.KeyboardKey.ONE, {.Ctrl}}] = set_input + "low"
+	key_mapper.mappings[{rl.KeyboardKey.TWO, {.Ctrl}}] = set_input + "mid"
+	key_mapper.mappings[{rl.KeyboardKey.THREE, {.Ctrl}}] = set_input + "high"
 }
 
 get_active_modifiers :: proc() -> Modifiers {
