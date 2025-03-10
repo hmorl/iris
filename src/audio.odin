@@ -1,13 +1,16 @@
 package iris
 
 import "core:fmt"
+import "core:log"
 import "core:math"
 import "core:math/cmplx"
 import "core:mem"
 import "core:slice"
 import "core:strings"
-
 import ma "vendor:miniaudio"
+
+BUFFER_SIZE :: 256
+SAMPLE_RATE :: 32000
 
 Audio_Context :: struct {
 	ma_context: ma.context_type,
@@ -15,8 +18,6 @@ Audio_Context :: struct {
 	data:       Audio_Data,
 }
 
-BUFFER_SIZE :: 256
-SAMPLE_RATE :: 44100
 
 Audio_Data :: struct {
 	buffers:      [2][BUFFER_SIZE]f32,
@@ -24,8 +25,15 @@ Audio_Data :: struct {
 	read_buffer:  i32,
 }
 
-init_audio :: proc(ctx: ^Audio_Context) -> bool {
-	result := ma.context_init(nil, 0, nil, &ctx.ma_context)
+init_audio :: proc(ctx: ^Audio_Context, device_name_filter: string) -> bool {
+	backends: ^ma.backend
+
+	when (ODIN_OS == .Linux) {
+		alsa := ma.backend.alsa
+		backends = &alsa
+	}
+
+	result := ma.context_init(backends, 0 if backends == nil else 1, nil, &ctx.ma_context)
 
 	if (result != ma.result.SUCCESS) {
 		return false
@@ -35,35 +43,34 @@ init_audio :: proc(ctx: ^Audio_Context) -> bool {
 	capture_device_count: u32
 	ma.context_get_devices(&ctx.ma_context, nil, nil, &capture_device_infos, &capture_device_count)
 
-	capture_devices := slice.from_ptr(capture_device_infos, int(capture_device_count))
-
-	if (slice.is_empty(capture_devices)) {
+	if (capture_device_count == 0) {
 		return false
 	}
 
-	device_name_filter := "Blackhole"
+	capture_devices := slice.from_ptr(capture_device_infos, int(capture_device_count))
 
 	device_id := slice.first(capture_devices).id
 
-	for device in capture_devices {
+	for &device in capture_devices {
+		name := strings.clone_from_bytes(device.name[:], context.temp_allocator)
+
+		if device_name_filter != "" {
+			if strings.contains(
+				strings.to_lower(name, context.temp_allocator),
+				strings.to_lower(device_name_filter, context.temp_allocator),
+			) {
+				device_id = device.id
+				break
+			}
+		}
+
 		if device.isDefault {
 			device_id = device.id
 		}
 	}
 
-	if (len(device_name_filter) > 0) {
-		for &device in capture_devices {
-			name := strings.trim_null(strings.clone_from_bytes(device.name[:]))
-
-			if strings.contains(strings.to_lower(name), strings.to_lower(device_name_filter)) {
-				device_id = device.id
-				break
-			}
-		}
-	}
-
 	id := strings.trim_null(strings.clone_from_bytes(device_id.coreaudio[:]))
-	fmt.println("Chosen id: ", id)
+	log.info("Audio device: ", id)
 
 	device_config := ma.device_config_init(ma.device_type.capture)
 	device_config.capture.pDeviceID = &device_id

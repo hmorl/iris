@@ -6,7 +6,9 @@
 package iris
 
 import "core:fmt"
+import "core:log"
 import "core:math"
+import "core:os"
 import "core:slice"
 import "core:strconv"
 import "core:strings"
@@ -97,6 +99,8 @@ State :: struct {
 }
 
 main :: proc() {
+	context.logger = log.create_console_logger(log.Level.Debug, log.Options{.Level})
+
 	key_mapper: Key_Mapper
 	initialize_mappings(&key_mapper)
 
@@ -107,9 +111,17 @@ main :: proc() {
 	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "visualization engine")
 	defer rl.CloseWindow()
 
-
 	audio_ctx: Audio_Context
-	init_audio(&audio_ctx)
+
+	device_name_filter := ""
+	if (len(os.args) > 1) {
+		device_name_filter = strings.trim_prefix(os.args[1], "--device-filter=")
+	}
+
+	if (init_audio(&audio_ctx, device_name_filter) != true) {
+		log.fatal("Failed to initialise audio engine")
+		os.exit(1)
+	}
 	defer deinit_audio(&audio_ctx)
 
 	vis_params: Params
@@ -135,7 +147,6 @@ main :: proc() {
 
 	for !rl.WindowShouldClose() {
 		rl.SetWindowTitle(rl.TextFormat("VISTECH (%d fps)", rl.GetFPS()))
-
 
 		if (rl.IsWindowResized() || first_frame) {
 			rl.UnloadRenderTexture(scene_texture)
