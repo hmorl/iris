@@ -1,4 +1,6 @@
-#version 330
+#ifdef GL_ES
+precision mediump float;
+#endif
 
 uniform bool u_addDrop;
 uniform vec2 u_dropPos;

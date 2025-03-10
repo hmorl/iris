@@ -23,7 +23,7 @@ make_scene_ink :: proc(params: Params) -> Scene {
 	scene.name = "INK"
 
 	state := new(Scene_Ink_State)
-	state.shader = rl.LoadShader(nil, "shaders/ink.frag")
+	state.shader = iris_load_shader("../shaders/ink.frag")
 	state.current_texture = rl.LoadRenderTexture(
 		params.width * INK_SCALE,
 		params.height * INK_SCALE,

@@ -136,7 +136,7 @@ main :: proc() {
 	scene_texture: rl.RenderTexture2D
 	defer rl.UnloadRenderTexture(scene_texture)
 
-	pixelate_shader := rl.LoadShader(nil, "shaders/pixelate.frag")
+	pixelate_shader := iris_load_shader("../shaders/pixelate.frag")
 	defer rl.UnloadShader(pixelate_shader)
 	set_shader_uniform(pixelate_shader, "u_amount", 2)
 

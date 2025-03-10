@@ -6,6 +6,7 @@ import "core:math/rand"
 import "core:time"
 
 import rl "vendor:raylib"
+import rlgl "vendor:raylib/rlgl"
 
 rand_col_f :: proc() -> [4]f32 {
 	return {rand.float32(), rand.float32(), rand.float32(), rand.float32()}
@@ -91,4 +92,15 @@ set_shader_uniform :: proc(shader: rl.Shader, name: cstring, val: Shader_Uniform
 	}
 
 	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, name), &value, data_type)
+}
+
+iris_load_shader :: proc($filename: string) -> rl.Shader {
+	SHADER :: #load(filename, cstring)
+	ES_V :: "#version 310 es\n\n"
+	CORE_V :: "#version 330 core\n\n"
+
+	gl_es := rlgl.GetVersion() == .OPENGL_ES_30
+	versioned_shader := gl_es ? ES_V + SHADER : CORE_V + SHADER
+
+	return rl.LoadShaderFromMemory(nil, versioned_shader)
 }
