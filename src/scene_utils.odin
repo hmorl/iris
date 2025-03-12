@@ -96,7 +96,7 @@ set_shader_uniform :: proc(shader: rl.Shader, name: cstring, val: Shader_Uniform
 
 iris_load_shader :: proc($filename: string) -> rl.Shader {
 	SHADER :: #load(filename, cstring)
-	ES_V :: "#version 310 es\n\n"
+	ES_V :: "#version 300 es\n\n"
 	CORE_V :: "#version 330 core\n\n"
 
 	gl_es := rlgl.GetVersion() == .OPENGL_ES_30
