@@ -49,28 +49,40 @@ init_audio :: proc(ctx: ^Audio_Context, device_name_filter: string) -> bool {
 
 	capture_devices := slice.from_ptr(capture_device_infos, int(capture_device_count))
 
-	device_id := slice.first(capture_devices).id
+	device_id: ma.device_id
+	default_device_id: ma.device_id
+	found_device_name: string
+	found_matching := false
+
+	log.info("Available devices:")
 
 	for &device in capture_devices {
 		name := strings.clone_from_bytes(device.name[:], context.temp_allocator)
+		log.info("Device: ", name, device.isDefault ? "[default]" : "")
 
-		if device_name_filter != "" {
+		if !found_matching && device_name_filter != "" {
 			if strings.contains(
 				strings.to_lower(name, context.temp_allocator),
 				strings.to_lower(device_name_filter, context.temp_allocator),
 			) {
 				device_id = device.id
-				break
+				found_matching = true
+				found_device_name = name
 			}
 		}
 
 		if device.isDefault {
-			device_id = device.id
+			default_device_id = device.id
+			found_device_name = name
 		}
 	}
 
-	id := strings.trim_null(strings.clone_from_bytes(device_id.coreaudio[:]))
-	log.info("Audio device: ", id)
+	if (!found_matching) {
+		log.info("Going with default")
+		device_id = default_device_id
+	}
+
+	log.info("Selected device:", found_device_name)
 
 	device_config := ma.device_config_init(ma.device_type.capture)
 	device_config.capture.pDeviceID = &device_id
