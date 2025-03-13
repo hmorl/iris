@@ -8,10 +8,10 @@ debug: build
 release: build
 
 build:
-	odin build src -out:${NAME} ${FLAGS}
+	mkdir -p ./out && odin build src -out:out/${NAME} ${FLAGS}
 
 run: build
-	./${NAME} --device-filter="BlackHole 2ch"
+	./out/${NAME} --device-filter="BlackHole 2ch"
 
 clean:
 	rm ${NAME}

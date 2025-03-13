@@ -1,9 +1,6 @@
-# ignore binaries (incl. extensionless ones)
-*
-!*.*
-!*/
+iris
+out/*
 *.bin
-!Makefile
 
 # macOS stuff
 .DS_Store
