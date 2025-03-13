@@ -19,7 +19,7 @@ vec4 marble(vec2 pixel_pos, vec2 drop_pos, vec4 colour, float radius) {
 		return colour;
     } else {
 		float epsilon = 0.01;
-		float factor = 1 - (radius * radius) / (dist * dist + epsilon);
+		float factor = 1.0 - (radius * radius) / (dist * dist + epsilon);
 		vec2 displaced_pos = (pixel_pos - drop_pos) * factor + drop_pos;
 
 		return texelFetch(u_prevTexture, ivec2(displaced_pos), 0);
