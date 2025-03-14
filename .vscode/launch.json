@@ -5,7 +5,7 @@
             "name": "Launch debug",
             "type": "lldb",
             "request": "launch",
-            "program": "${workspaceFolder}/iris",
+            "program": "${workspaceFolder}/out/iris",
             "cwd": "${workspaceFolder}",
 			"preLaunchTask": "build debug",
         }
