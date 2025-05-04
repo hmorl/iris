@@ -6,9 +6,10 @@ import "core:slice"
 import rl "vendor:raylib"
 
 Sketch_State :: struct {
-	radius: f32,
-	colour: rl.Color,
-	angle:  f32,
+	radius:       f32,
+	colour:       rl.Color,
+	angle:        f32,
+	prev_texture: rl.RenderTexture2D,
 }
 
 make_scene_sketch :: proc(params: Params) -> Scene {
@@ -31,7 +32,7 @@ sketch_draw :: proc(state: ^Sketch_State, p: Params, texture: rl.RenderTexture2D
 	state.angle += 2 * p.dt
 	state.angle = math.mod(state.angle, math.PI * 2)
 
-	// rl.ClearBackground(rl.BLANK)
+	rl.ClearBackground(rl.BLANK)
 
 	t := state.angle
 	// x := 400 * math.cos(t) / (1 + math.sin(t) * math.sin(t))

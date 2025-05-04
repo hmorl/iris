@@ -5,6 +5,7 @@
 
 package iris
 
+import "core:c/libc"
 import "core:fmt"
 import "core:log"
 import "core:math"
@@ -12,10 +13,13 @@ import "core:os"
 import "core:slice"
 import "core:strconv"
 import "core:strings"
+
 import rl "vendor:raylib"
 
-WINDOW_WIDTH :: 1280
-WINDOW_HEIGHT :: 720
+PLATFORM_RASPBERRY_PI :: #config(PLATFORM_RASPBERRY_PI, false)
+
+WINDOW_WIDTH :: 720
+WINDOW_HEIGHT :: 576
 
 TARGET_FPS :: 60
 
@@ -51,6 +55,15 @@ initialize_mappings :: proc(key_mapper: ^Key_Mapper) {
 	key_mapper.mappings[{rl.KeyboardKey.ONE, {.Ctrl}}] = set_input + "low"
 	key_mapper.mappings[{rl.KeyboardKey.TWO, {.Ctrl}}] = set_input + "mid"
 	key_mapper.mappings[{rl.KeyboardKey.THREE, {.Ctrl}}] = set_input + "high"
+
+	key_mapper.mappings[{rl.KeyboardKey.SLASH, {.Shift}}] = "toggle_fps"
+	key_mapper.mappings[{rl.KeyboardKey.P, {.Shift}}] = "toggle_pixelate"
+	key_mapper.mappings[{rl.KeyboardKey.C, {.Shift}}] = "toggle_cursor"
+
+	key_mapper.mappings[{rl.KeyboardKey.Q, {.Ctrl, .Alt, .Shift}}] = "shut_down"
+	key_mapper.mappings[{rl.KeyboardKey.P, {.Ctrl, .Alt, .Shift}}] = "reboot_composite_pal"
+	key_mapper.mappings[{rl.KeyboardKey.N, {.Ctrl, .Alt, .Shift}}] = "reboot_composite_ntsc"
+	key_mapper.mappings[{rl.KeyboardKey.H, {.Ctrl, .Alt, .Shift}}] = "reboot_composite_hdmi"
 }
 
 get_active_modifiers :: proc() -> Modifiers {
@@ -93,9 +106,22 @@ get_triggered_actions :: proc(key_mapper: ^Key_Mapper) -> []string {
 	return actions[:]
 }
 
+Quit_Action :: enum {
+	none,
+	quit,
+	request_reboot_composite_pal,
+	request_reboot_composite_ntsc,
+	request_reboot_hdmi,
+}
 
 State :: struct {
-	audio_level: f32,
+	audio_level:     f32,
+	show_fps:        bool,
+	enable_pixelate: bool,
+	enable_cursor:   bool,
+	should_exit:     bool,
+	quit_action:     Quit_Action,
+	should_quit:     bool,
 }
 
 main :: proc() {
@@ -104,12 +130,14 @@ main :: proc() {
 	key_mapper: Key_Mapper
 	initialize_mappings(&key_mapper)
 
-	rl.SetTraceLogLevel(rl.TraceLogLevel.WARNING)
-	rl.SetConfigFlags({.MSAA_4X_HINT, .VSYNC_HINT, .WINDOW_RESIZABLE, .WINDOW_HIGHDPI})
+	rl.SetTraceLogLevel(rl.TraceLogLevel.INFO)
+	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
 	rl.SetTargetFPS(TARGET_FPS)
 
-	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "visualization engine")
+	rl.InitWindow(WINDOW_WIDTH, WINDOW_HEIGHT, "⌒")
 	defer rl.CloseWindow()
+
+	rl.SetExitKey(rl.KeyboardKey.KEY_NULL)
 
 	audio_ctx: Audio_Context
 
@@ -138,15 +166,16 @@ main :: proc() {
 
 	pixelate_shader := iris_load_shader("../shaders/pixelate.frag")
 	defer rl.UnloadShader(pixelate_shader)
-	set_shader_uniform(pixelate_shader, "u_amount", 2)
+	set_shader_uniform(pixelate_shader, "u_amount", 8)
 
 	first_frame := true
 
 	state: State
+	state.enable_cursor = true
 	state.audio_level = 1.0
 
-	for !rl.WindowShouldClose() {
-		rl.SetWindowTitle(rl.TextFormat("VISTECH (%d fps)", rl.GetFPS()))
+	for !(rl.WindowShouldClose() || state.should_exit) {
+		defer first_frame = false
 
 		if (rl.IsWindowResized() || first_frame) {
 			rl.UnloadRenderTexture(scene_texture)
@@ -173,25 +202,53 @@ main :: proc() {
 			rl.Vector2{vis_params.width_f, vis_params.height_f},
 		)
 
-		actions := get_triggered_actions(&key_mapper)
+		if state.quit_action != .none && rl.IsKeyPressed(rl.KeyboardKey.Y) {
+			state.should_exit = true
+		} else if state.quit_action != .none && rl.IsKeyPressed(rl.KeyboardKey.N) ||
+		   rl.IsKeyPressed(rl.KeyboardKey.ESCAPE) {
+			state.quit_action = .none
+		}
 
-		for a in actions {
-			if (strings.has_prefix(a, set_input)) {
-				switch strings.trim_prefix(a, set_input) {
-				case "low":
-					state.audio_level = 0.2
-				case "mid":
-					state.audio_level = 0.6
-				case "high":
-					state.audio_level = 1.0
-				}
-			} else if (strings.has_prefix(a, switch_scene)) {
-				param := strings.trim_prefix(a, switch_scene)
-				scene_num, ok := strconv.parse_int(param)
-				assert(ok)
+		if state.quit_action == .none {
+			actions := get_triggered_actions(&key_mapper)
 
-				if (scene_num <= len(scene_manager.scenes)) {
-					scene_manager.active_scene = &scene_manager.scenes[scene_num - 1]
+			for a in actions {
+				if (strings.has_prefix(a, set_input)) {
+					switch strings.trim_prefix(a, set_input) {
+					case "low":
+						state.audio_level = 0.2
+					case "mid":
+						state.audio_level = 0.6
+					case "high":
+						state.audio_level = 1.0
+					}
+				} else if (strings.has_prefix(a, switch_scene)) {
+					param := strings.trim_prefix(a, switch_scene)
+					scene_num, ok := strconv.parse_int(param)
+					assert(ok)
+
+					if (scene_num <= len(scene_manager.scenes)) {
+						scene_manager.active_scene = &scene_manager.scenes[scene_num - 1]
+					}
+				} else if (a == "toggle_fps") {
+					state.show_fps = !state.show_fps
+				} else if (a == "toggle_pixelate") {
+					state.enable_pixelate = !state.enable_pixelate
+				} else if (a == "toggle_cursor") {
+					state.enable_cursor = !state.enable_cursor
+					if (state.enable_cursor) {
+						rl.EnableCursor()
+					} else {
+						rl.DisableCursor()
+					}
+				} else if a == "shut_down" {
+					state.quit_action = .quit
+				} else if a == "reboot_composite_pal" {
+					state.quit_action = .request_reboot_composite_pal
+				} else if a == "reboot_composite_ntsc" {
+					state.quit_action = .request_reboot_composite_ntsc
+				} else if a == "reboot_composite_hdmi" {
+					state.quit_action = .request_reboot_hdmi
 				}
 			}
 		}
@@ -203,11 +260,14 @@ main :: proc() {
 			defer rl.EndDrawing()
 
 			{
-				rl.BeginShaderMode(pixelate_shader)
-				defer rl.EndShaderMode()
+				if (state.enable_pixelate) {
+					rl.BeginShaderMode(pixelate_shader)
+				}
+				defer if (state.enable_pixelate) {
+					rl.EndShaderMode()
+				}
 
 				rl.ClearBackground(rl.BLACK)
-
 				rl.DrawTexturePro(
 					texture = scene_texture.texture,
 					source = {
@@ -221,9 +281,69 @@ main :: proc() {
 				)
 			}
 
-			first_frame = false
+			if (state.show_fps) {
+				draw_label(rl.TextFormat("%d FPS", rl.GetFPS()), {32, 32})
+			}
+
+			#partial switch state.quit_action {
+			case .quit:
+				draw_label("shut down IRIS? [y / n]", vis_params.center_f, .Center)
+			case .request_reboot_composite_pal:
+				draw_label("reboot IRIS - Composite (PAL)? [y / n]", vis_params.center_f, .Center)
+			case .request_reboot_composite_ntsc:
+				draw_label("reboot IRIS - Composite (NTSC)? [y / n]", vis_params.center_f, .Center)
+			case .request_reboot_hdmi:
+				draw_label("reboot - HDMI? [y / n]", vis_params.center_f, .Center)
+			}
 		}
 
 		free_all(context.temp_allocator)
+	}
+
+	exit_code := 0
+
+	#partial switch state.quit_action {
+	case .request_reboot_composite_pal:
+		exit_code = 21
+	case .request_reboot_composite_ntsc:
+		exit_code = 22
+	case .request_reboot_hdmi:
+		exit_code = 23
+	}
+
+	defer os.exit(exit_code)
+}
+
+
+Text_Justification :: enum {
+	Left,
+	Center,
+}
+
+draw_label :: proc(text: cstring, pos: rl.Vector2, justify: Text_Justification = .Left) {
+	padding :: 8
+	size :: 24
+
+	w := rl.MeasureText(text, size)
+
+	half_w: i32 = w / 2
+	half_h :: size / 2
+
+	x := i32(pos.x)
+	y := i32(pos.y)
+
+	switch justify {
+	case .Left:
+		rl.DrawRectangle(x - padding, y - padding, w + padding * 2, size + padding * 2, rl.BLACK)
+		rl.DrawText(text, x, y, size, rl.WHITE)
+	case .Center:
+		rl.DrawRectangle(
+			x - half_w - padding,
+			y - half_h - padding,
+			w + padding * 2,
+			size + padding * 2,
+			rl.BLACK,
+		)
+		rl.DrawText(text, x - half_w, y - half_h, size, rl.WHITE)
 	}
 }

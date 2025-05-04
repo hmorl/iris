@@ -15,9 +15,9 @@ RAYLIB_LIB := ./vendor/raylib/src/libraylib.a
 ifeq ($(UNAME_OS),Linux)
 	OS := linux
 
-	ifeq ($(UNAME_ARCH),aarch64) # assuming raspberry pi
+	ifeq ($(UNAME_ARCH),aarch64) # assuming arm64 linux is raspberry pi
 		RAYLIB_BUILD_FLAGS ?= PLATFORM=PLATFORM_DRM GRAPHICS=GRAPHICS_API_OPENGL_ES3
-		EXTRA_FLAGS += -extra-linker-flags="-ldrm -lgbm -lEGL -lGLESv2"
+		EXTRA_FLAGS += -extra-linker-flags="-ldrm -lgbm -lEGL -lGLESv2" -define:PLATFORM_RASPBERRY_PI=true
 	endif
 endif
 ifeq ($(UNAME_OS),Darwin)

@@ -18,7 +18,6 @@ Audio_Context :: struct {
 	data:       Audio_Data,
 }
 
-
 Audio_Data :: struct {
 	buffers:      [2][BUFFER_SIZE]f32,
 	write_buffer: i32,

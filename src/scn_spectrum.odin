@@ -15,7 +15,7 @@ spectrum_draw :: proc(data: rawptr, params: Params, texture: rl.RenderTexture2D)
 	rl.BeginTextureMode(texture)
 	rl.ClearBackground(rl.BLANK)
 	// rl.DrawCircle(params.width / 2, params.height / 2, 30.0, rl.BLUE)
-	width := rl.GetScreenWidth() / 128
+	width := params.width / 128
 
 	for p, idx in params.spectrum_smooth {
 		p2 := i32(p * 100)

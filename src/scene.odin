@@ -20,7 +20,7 @@ Scene_Manager :: struct {
 }
 
 init_scenes :: proc(manager: ^Scene_Manager, params: Params) {
-	append(&manager.scenes, make_scene_ink(params))
+	append(&manager.scenes, make_scene_ambrosia(params))
 	append(&manager.scenes, make_scene_hello_world(params))
 	append(&manager.scenes, make_scene_sketch(params))
 	append(&manager.scenes, make_scene_spectrum(params))
@@ -47,6 +47,7 @@ Params :: struct {
 	center:            [2]i32,
 	center_f:          [2]f32,
 	mouse_pos:         rl.Vector2,
+	mouse_delta:       rl.Vector2,
 	mouse_pressed:     bool,
 	mouse_down:        bool,
 	dt:                f32,
@@ -61,7 +62,7 @@ Params :: struct {
 
 @(private)
 smooth :: proc(current: f32, new: f32, amount: f32) -> f32 {
-	return new * amount + current * (1.0 - amount)
+	return new * (1.0 - amount) + current * amount
 }
 
 init_params :: proc(params: ^Params, initial_width, initial_height: i32, buffer_size: i32) {
@@ -105,17 +106,18 @@ update_params :: proc(
 		params.mouse_pos = mouse_pos
 	}
 
+	params.mouse_delta = rl.GetMouseDelta()
 	params.mouse_pressed = rl.IsMouseButtonPressed(rl.MouseButton.LEFT)
 	params.mouse_down = rl.IsMouseButtonDown(rl.MouseButton.LEFT)
 	params.dt = rl.GetFrameTime()
 	params.audio = audio_buffer
 
 	params.rms = rms
-	params.rms_smooth = smooth(params.rms_smooth, rms, 0.2)
+	params.rms_smooth = smooth(params.rms_smooth, rms, 0.5)
 
 	params.spectrum = spectrum
 	for &s, idx in params.spectrum_smooth {
-		s = smooth(s, spectrum[idx], 0.2)
+		s = smooth(s, spectrum[idx], 0.5)
 	}
 
 	params.centroid = centroid

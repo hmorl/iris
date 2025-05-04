@@ -1,6 +1,7 @@
 package iris
 
 import "core:fmt"
+import "core:time"
 import rl "vendor:raylib"
 
 Scene_Hello_World_State :: struct {}
@@ -22,11 +23,13 @@ scene_hello_world_draw :: proc(
 	params: Params,
 	texture: rl.RenderTexture2D,
 ) {
+	lfo1 := lfo(0.16, .sin, 0.0)
+	lfo2 := lfo(0.1, .tri, 0.5, params.mouse_down ? time.now() : {})
+
 	rl.BeginTextureMode(texture)
 	defer rl.EndTextureMode()
 
-	rl.ClearBackground(rl.BLANK)
-
+	rl.ClearBackground({58, 0, 5, u8(lfo2 * 200.0)})
 	N := len(params.audio)
 
 	for s, idx in params.audio {
@@ -38,22 +41,27 @@ scene_hello_world_draw :: proc(
 		rl.DrawRectangle(i32(x), i32(params.height_f - s2 * 300), 1, i32(s2 * 300), rl.BLUE)
 	}
 
-	rl.DrawCircle(
-		params.width / 2,
-		params.height / 2,
-		params.rms_smooth * params.rms_smooth * 2000,
-		rl.GREEN,
-	)
+	sides := 2 + i32(params.rms_smooth * 15)
 
-	amt := i32(rl.Clamp(params.rms * 1000, 0, 300))
+	for i in 0 ..< 5 {
+		rl.DrawPolyLines(
+			{params.width_f / 2, params.height_f / 2},
+			sides,
+			params.rms_smooth * params.width_f * f32(i) * 0.8,
+			params.centroid * 360 + f32(i) * 10,
+			rl.GREEN,
+		)
+	}
+
+	amt := i32(rl.Clamp(params.centroid * 1000, 0, 200))
 
 	for i in 0 ..< amt {
 		rl.DrawRectangle(
 			rl.GetRandomValue(0, i32(params.width)),
 			rl.GetRandomValue(0, i32(params.height)),
-			4,
-			4,
-			rl.Color{255, 30, 30, 255},
+			7,
+			2,
+			rl.Color{255, 30, 30, u8(lfo1 * 255.0)},
 		)
 	}
 }
