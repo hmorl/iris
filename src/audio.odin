@@ -53,7 +53,7 @@ init_audio :: proc(ctx: ^Audio_Context, device_name_filter: string) -> bool {
 	found_device_name: string
 	found_matching := false
 
-	log.info("Available devices:")
+	log.info("Available audio devices:")
 
 	for &device in capture_devices {
 		name := strings.clone_from_bytes(device.name[:], context.temp_allocator)
@@ -70,14 +70,14 @@ init_audio :: proc(ctx: ^Audio_Context, device_name_filter: string) -> bool {
 			}
 		}
 
-		if device.isDefault {
+		if device.isDefault && !found_matching {
 			default_device_id = device.id
 			found_device_name = name
 		}
 	}
 
 	if (!found_matching) {
-		log.info("Going with default")
+		log.info("Selecting default")
 		device_id = default_device_id
 	}
 

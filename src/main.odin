@@ -125,12 +125,12 @@ State :: struct {
 }
 
 main :: proc() {
-	context.logger = log.create_console_logger(log.Level.Debug, log.Options{.Level})
+	context.logger = log.create_console_logger(log.Level.Info, log.Options{.Level})
 
 	key_mapper: Key_Mapper
 	initialize_mappings(&key_mapper)
 
-	rl.SetTraceLogLevel(rl.TraceLogLevel.INFO)
+	rl.SetTraceLogLevel(rl.TraceLogLevel.WARNING)
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
 	rl.SetTargetFPS(TARGET_FPS)
 
