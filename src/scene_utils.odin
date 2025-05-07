@@ -52,22 +52,12 @@ lissajous :: proc(theta: f32) -> [2]f32 {
 	return {x, y}
 }
 
-lerp :: proc(begin, end: $T, t: f64) -> T {
-	return begin + (end - begin) * t
+interp :: proc(easing: ease.Ease, begin, end: $Value, t: $T) -> Value {
+	return begin + (end - begin) * ease.ease(easing, t)
 }
 
-// interp_ease_in_cubic :: proc(begin, end: $T, t: f64) -> T {
-// 	eased := math.pow(t, 3)
-// 	return lerp(begin, end, eased)
-// }
-
-// interp_ease_out_cubic :: proc(begin, end: $T, t: f64) -> T {
-// 	eased := 1 - math.pow(1 - t, 3)
-// 	return lerp(begin, end, eased)
-// }
-
-interp :: proc(easing: ease.Ease, begin, end: $Value, t: $T) -> Value {
-	return lerp(begin, end, ease.ease(easing, t))
+lerp :: proc(begin, end: $T, t: f64) -> T {
+	return ease(ease.Ease.Linear, begin, end, t)
 }
 
 /******************************************************************************
@@ -186,6 +176,7 @@ Shader stuff
 Shader_Uniform :: union {
 	i32,
 	f32,
+	bool,
 	rl.Vector2,
 	rl.Color,
 	rl.Vector4,
@@ -196,6 +187,8 @@ set_shader_uniform :: proc(shader: rl.Shader, name: cstring, val: Shader_Uniform
 	data_type: rl.ShaderUniformDataType
 
 	switch _ in val {
+	case bool:
+		data_type = rl.ShaderUniformDataType.INT
 	case f32:
 		data_type = rl.ShaderUniformDataType.FLOAT
 	case rl.Vector2:

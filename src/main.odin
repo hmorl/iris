@@ -45,6 +45,8 @@ switch_scene :: "switch_scene_"
 set_input :: "set_input_"
 
 initialize_mappings :: proc(key_mapper: ^Key_Mapper) {
+	key_mapper.mappings[{rl.KeyboardKey.ESCAPE, {}}] = "enter_global_mode"
+
 	key_mapper.mappings[{rl.KeyboardKey.Q, {}}] = switch_scene + "1"
 	key_mapper.mappings[{rl.KeyboardKey.W, {}}] = switch_scene + "2"
 	key_mapper.mappings[{rl.KeyboardKey.E, {}}] = switch_scene + "3"
@@ -56,14 +58,19 @@ initialize_mappings :: proc(key_mapper: ^Key_Mapper) {
 	key_mapper.mappings[{rl.KeyboardKey.TWO, {.Ctrl}}] = set_input + "mid"
 	key_mapper.mappings[{rl.KeyboardKey.THREE, {.Ctrl}}] = set_input + "high"
 
-	key_mapper.mappings[{rl.KeyboardKey.SLASH, {.Shift}}] = "toggle_fps"
+	key_mapper.mappings[{rl.KeyboardKey.W, {.Shift}}] = "toggle_warp"
 	key_mapper.mappings[{rl.KeyboardKey.P, {.Shift}}] = "toggle_pixelate"
-	key_mapper.mappings[{rl.KeyboardKey.C, {.Shift}}] = "toggle_cursor"
+	key_mapper.mappings[{rl.KeyboardKey.ESCAPE, {.Shift}}] = "clear_fx"
+
+	key_mapper.mappings[{rl.KeyboardKey.SLASH, {.Shift}}] = "toggle_fps"
+	key_mapper.mappings[{rl.KeyboardKey.C, {.Ctrl, .Alt, .Shift}}] = "toggle_cursor"
 
 	key_mapper.mappings[{rl.KeyboardKey.Q, {.Ctrl, .Alt, .Shift}}] = "shut_down"
 	key_mapper.mappings[{rl.KeyboardKey.P, {.Ctrl, .Alt, .Shift}}] = "reboot_composite_pal"
 	key_mapper.mappings[{rl.KeyboardKey.N, {.Ctrl, .Alt, .Shift}}] = "reboot_composite_ntsc"
 	key_mapper.mappings[{rl.KeyboardKey.H, {.Ctrl, .Alt, .Shift}}] = "reboot_composite_hdmi"
+
+	key_mapper.mappings[{rl.KeyboardKey.ENTER, {}}] = "enter_scene_mode"
 }
 
 get_active_modifiers :: proc() -> Modifiers {
@@ -117,6 +124,7 @@ Quit_Action :: enum {
 State :: struct {
 	audio_level:     f32,
 	show_fps:        bool,
+	enable_warp:     bool,
 	enable_pixelate: bool,
 	enable_cursor:   bool,
 	should_exit:     bool,
@@ -164,9 +172,9 @@ main :: proc() {
 	scene_texture: rl.RenderTexture2D
 	defer rl.UnloadRenderTexture(scene_texture)
 
-	pixelate_shader := iris_load_shader("../shaders/pixelate.frag")
-	defer rl.UnloadShader(pixelate_shader)
-	set_shader_uniform(pixelate_shader, "u_amount", 8)
+	global_fx_shader := iris_load_shader("../shaders/multi_fx.frag")
+	defer rl.UnloadShader(global_fx_shader)
+	set_shader_uniform(global_fx_shader, "u_pixelateAmount", 8)
 
 	first_frame := true
 
@@ -197,7 +205,7 @@ main :: proc() {
 		)
 
 		set_shader_uniform(
-			pixelate_shader,
+			global_fx_shader,
 			"u_resolution",
 			rl.Vector2{vis_params.width_f, vis_params.height_f},
 		)
@@ -232,8 +240,13 @@ main :: proc() {
 					}
 				} else if (a == "toggle_fps") {
 					state.show_fps = !state.show_fps
+				} else if (a == "toggle_warp") {
+					state.enable_warp = !state.enable_warp
 				} else if (a == "toggle_pixelate") {
 					state.enable_pixelate = !state.enable_pixelate
+				} else if (a == "clear_fx") {
+					state.enable_warp = false
+					state.enable_pixelate = false
 				} else if (a == "toggle_cursor") {
 					state.enable_cursor = !state.enable_cursor
 					if (state.enable_cursor) {
@@ -260,12 +273,23 @@ main :: proc() {
 			defer rl.EndDrawing()
 
 			{
-				if (state.enable_pixelate) {
-					rl.BeginShaderMode(pixelate_shader)
+				set_shader_uniform(
+					global_fx_shader,
+					"u_enablePixelate",
+					state.enable_pixelate ? 1 : 0,
+				)
+
+				set_shader_uniform(global_fx_shader, "u_enableWarp", state.enable_warp ? 1 : 0)
+
+				warp_pos: rl.Vector2 = {
+					f32(lfo(0.2, .rand, 0.0, {}, 123, 0.7)),
+					f32(lfo(0.15, .rand, 0.0, {}, 97, 0.7)),
 				}
-				defer if (state.enable_pixelate) {
-					rl.EndShaderMode()
-				}
+
+				set_shader_uniform(global_fx_shader, "u_warpPos", warp_pos)
+
+				rl.BeginShaderMode(global_fx_shader)
+				defer rl.EndShaderMode()
 
 				rl.ClearBackground(rl.BLACK)
 				rl.DrawTexturePro(
