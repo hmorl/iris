@@ -54,9 +54,11 @@ initialize_mappings :: proc(key_mapper: ^Key_Mapper) {
 	key_mapper.mappings[{rl.KeyboardKey.T, {}}] = switch_scene + "5"
 	key_mapper.mappings[{rl.KeyboardKey.Y, {}}] = switch_scene + "6"
 
-	key_mapper.mappings[{rl.KeyboardKey.ONE, {.Ctrl}}] = set_input + "low"
-	key_mapper.mappings[{rl.KeyboardKey.TWO, {.Ctrl}}] = set_input + "mid"
-	key_mapper.mappings[{rl.KeyboardKey.THREE, {.Ctrl}}] = set_input + "high"
+	key_mapper.mappings[{rl.KeyboardKey.ONE, {.Ctrl}}] = set_input + "0%"
+	key_mapper.mappings[{rl.KeyboardKey.TWO, {.Ctrl}}] = set_input + "25%"
+	key_mapper.mappings[{rl.KeyboardKey.THREE, {.Ctrl}}] = set_input + "50%"
+	key_mapper.mappings[{rl.KeyboardKey.FOUR, {.Ctrl}}] = set_input + "75%"
+	key_mapper.mappings[{rl.KeyboardKey.FIVE, {.Ctrl}}] = set_input + "100%"
 
 	key_mapper.mappings[{rl.KeyboardKey.W, {.Shift}}] = "toggle_warp"
 	key_mapper.mappings[{rl.KeyboardKey.P, {.Shift}}] = "toggle_pixelate"
@@ -180,7 +182,7 @@ main :: proc() {
 
 	state: State
 	state.enable_cursor = true
-	state.audio_level = 1.0
+	state.audio_level = 0.5
 
 	for !(rl.WindowShouldClose() || state.should_exit) {
 		defer first_frame = false
@@ -223,11 +225,15 @@ main :: proc() {
 			for a in actions {
 				if (strings.has_prefix(a, set_input)) {
 					switch strings.trim_prefix(a, set_input) {
-					case "low":
-						state.audio_level = 0.2
-					case "mid":
-						state.audio_level = 0.6
-					case "high":
+					case "0%":
+						state.audio_level = 0
+					case "25%":
+						state.audio_level = 0.25
+					case "50%":
+						state.audio_level = 0.5
+					case "75%":
+						state.audio_level = 0.75
+					case "100%":
 						state.audio_level = 1.0
 					}
 				} else if (strings.has_prefix(a, switch_scene)) {
