@@ -108,47 +108,27 @@ scene_ambrosia_draw :: proc(
 		// 	st8.glitch_amt = rl.Vector2Clamp(st8.glitch_amt, {-1, -1}, {1, 1})
 		// }
 
-		lfo_1 := lfo(0.3, Lfo_Shape.rand, rand_id = 123)
-		lfo_2 := lfo(0.34, Lfo_Shape.rand, rand_id = 42)
-
-		glitch_x := map_val(lfo_1, 0, 1, -0.05, 0.05)
-		glitch_y := map_val(lfo_2, 0, 1, -0.05, 0.05)
-
+		lfo_1 := lfo(0.28, Lfo_Shape.rand, rand_id = 123)
+		lfo_2 := lfo(0.3, Lfo_Shape.rand, rand_id = 42)
+		glitch_x := map_val(lfo_1, 0, 1, -0.07, 0.05)
+		glitch_y := map_val(lfo_2, 0, 1, -0.07, 0.05)
 		st8.glitch_amt = {f32(glitch_x), f32(glitch_y)}
-
 		set_shader_uniform(st8.shader, "u_glitchXY", st8.glitch_amt)
 
-		st8.angle += 0.1 * params.dt
+		drop_size := map_val(math.pow(params.rms_smooth, 2), 0, 0.02, 0, params.width_f / 16.0)
+		set_shader_uniform(st8.shader, "u_dropRadius", drop_size)
 
-		set_shader_uniform(
-			st8.shader,
-			"u_dropRadius",
-			(16 + (params.width_f / 100) * params.rms * 5),
-		)
-
+		st8.angle += params.centroid_smooth * 3 * params.dt
 		pos := 300 * lissajous(st8.angle) + params.center_f
-
-		NOISE_Y :: 9.0
-		t := rl.GetTime() * 0.5
-
-		nois := rl.Vector2{noise.noise_2d(123, {t, NOISE_Y}), noise.noise_2d(2, {t, NOISE_Y})}
-
 		set_shader_uniform(st8.shader, "u_dropPos", pos)
 
-		do_next_col := false
-
 		if (timer_update(&st8.col_timer)) {
-			do_next_col = true
-		}
-
-		if (do_next_col) {
 			lfo := lfo(0.03, Lfo_Shape.saw_up, 0.4, st8.lfo_start_time)
 			next_col := next_col(f32(lfo))
 			c := rl.ColorNormalize(next_col)
 			st8.current_colour = {c.r, c.g, c.b, c.a}
+			set_shader_uniform(st8.shader, "u_dropCol", st8.current_colour)
 		}
-
-		set_shader_uniform(st8.shader, "u_dropCol", st8.current_colour)
 
 		rl.DrawTextureRec(
 			st8.current_texture.texture,
