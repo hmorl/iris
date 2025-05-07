@@ -1,9 +1,9 @@
-//     ⌒     
-//  ┳ ┳┓ ┳ ┏┓ 
-//  ┃ ┣┫ ┃ ┗┓ 
-//  ┻ ┛┗ ┻ ┗┛ 
-
 package iris
+
+//       ⌒      
+//  ┬ ┬─┐ ┬ ┌─┐ 
+//  │ ├┬┘ │ └─┐ 
+//  ┴ ┴└─ ┴ └─┘ 
 
 import "core:c/libc"
 import "core:fmt"

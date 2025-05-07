@@ -1,5 +1,9 @@
 package iris
 
+// ┌─┐ ┌┬┐ ┌┐  ┬─┐ ┌─┐ ┌─┐ ┬ ┌─┐ 
+// ├─┤ │││ ├┴┐ ├┬┘ │ │ └─┐ │ ├─┤ 
+// ┴ ┴ ┴ ┴ └─┘ ┴└─ └─┘ └─┘ ┴ ┴ ┴ 
+
 import "core:fmt"
 import "core:math"
 import "core:math/noise"
