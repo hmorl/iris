@@ -64,13 +64,13 @@ initialize_mappings :: proc(key_mapper: ^Key_Mapper) {
 	key_mapper.mappings[{rl.KeyboardKey.P, {.Shift}}] = "toggle_pixelate"
 	key_mapper.mappings[{rl.KeyboardKey.ESCAPE, {.Shift}}] = "clear_fx"
 
-	key_mapper.mappings[{rl.KeyboardKey.SLASH, {.Shift}}] = "toggle_fps"
-	key_mapper.mappings[{rl.KeyboardKey.C, {.Ctrl, .Alt, .Shift}}] = "toggle_cursor"
+	key_mapper.mappings[{rl.KeyboardKey.SLASH, {.Ctrl, .Alt}}] = "toggle_fps"
+	key_mapper.mappings[{rl.KeyboardKey.C, {.Ctrl, .Alt}}] = "toggle_cursor"
 
-	key_mapper.mappings[{rl.KeyboardKey.Q, {.Ctrl, .Alt, .Shift}}] = "shut_down"
-	key_mapper.mappings[{rl.KeyboardKey.P, {.Ctrl, .Alt, .Shift}}] = "reboot_composite_pal"
-	key_mapper.mappings[{rl.KeyboardKey.N, {.Ctrl, .Alt, .Shift}}] = "reboot_composite_ntsc"
-	key_mapper.mappings[{rl.KeyboardKey.H, {.Ctrl, .Alt, .Shift}}] = "reboot_composite_hdmi"
+	key_mapper.mappings[{rl.KeyboardKey.Q, {.Ctrl, .Alt}}] = "shut_down"
+	key_mapper.mappings[{rl.KeyboardKey.P, {.Ctrl, .Alt}}] = "reboot_composite_pal"
+	key_mapper.mappings[{rl.KeyboardKey.N, {.Ctrl, .Alt}}] = "reboot_composite_ntsc"
+	key_mapper.mappings[{rl.KeyboardKey.H, {.Ctrl, .Alt}}] = "reboot_hdmi"
 
 	key_mapper.mappings[{rl.KeyboardKey.ENTER, {}}] = "enter_scene_mode"
 }
@@ -266,7 +266,7 @@ main :: proc() {
 					state.quit_action = .request_reboot_composite_pal
 				} else if a == "reboot_composite_ntsc" {
 					state.quit_action = .request_reboot_composite_ntsc
-				} else if a == "reboot_composite_hdmi" {
+				} else if a == "reboot_hdmi" {
 					state.quit_action = .request_reboot_hdmi
 				}
 			}
