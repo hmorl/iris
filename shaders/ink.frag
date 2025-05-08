@@ -27,7 +27,7 @@ vec4 marble(sampler2D tex, vec2 res, vec2 pixel_pos, vec2 drop_pos, vec4 colour,
 }
 
 void main() {
-	vec2 fragCoord = gl_FragCoord.xy;
+	vec2 fragCoord = vec2(gl_FragCoord.x, u_resolution.y - gl_FragCoord.y);
 
 	vec2 res = u_resolution + u_glitchXY * (u_resolution / 8.0);
 

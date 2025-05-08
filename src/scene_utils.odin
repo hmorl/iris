@@ -199,7 +199,6 @@ set_shader_uniform :: proc(shader: rl.Shader, name: cstring, val: Shader_Uniform
 		data_type = rl.ShaderUniformDataType.INT
 	case rl.Color:
 		data_type = rl.ShaderUniformDataType.IVEC4
-	case:
 	}
 
 	rl.SetShaderValue(shader, rl.GetShaderLocation(shader, name), &value, data_type)
