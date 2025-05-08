@@ -1,25 +1,30 @@
 package iris
 
+// ┌┐┌ ┌─┐ ┌─┐ ┬┌─ ┬   ┌─┐ ┌─┐ ┌─┐   ┌─┐ ┌─┐   ┬ ┬ ┌─┐ ┬─┐ ┌┬┐ ┌─┐ ┌┐┌ ┬ ┌─┐
+// │││ ├┤  │   ├┴┐ │   ├─┤ │   ├┤    │ │ ├┤    ├─┤ ├─┤ ├┬┘ │││ │ │ │││ │ ├─┤
+// ┘└┘ └─┘ └─┘ ┴ ┴ ┴─┘ ┴ ┴ └─┘ └─┘   └─┘ └     ┴ ┴ ┴ ┴ ┴└─ ┴ ┴ └─┘ ┘└┘ ┴ ┴ ┴
+
 import "core:fmt"
 import "core:time"
 import rl "vendor:raylib"
 
-Scene_Hello_World_State :: struct {}
+Scene_Harmonia_State :: struct {
+}
 
-make_scene_hello_world :: proc(params: Params) -> Scene {
+make_scene_harmonia :: proc(params: Params) -> Scene {
 	scene: Scene
 
 	scene.name = "helloo"
-	state := new(Scene_Hello_World_State)
+	state := new(Scene_Harmonia_State)
 	scene.data = state
-	scene.draw = Draw_Scene_Proc(scene_hello_world_draw)
-	scene.deinit = Deinit_Scene_Proc(scene_hello_world_deinit)
+	scene.draw = Draw_Scene_Proc(scene_harmonia_draw)
+	scene.deinit = Deinit_Scene_Proc(scene_harmonia_deinit)
 
 	return scene
 }
 
-scene_hello_world_draw :: proc(
-	state_data: ^Scene_Hello_World_State,
+scene_harmonia_draw :: proc(
+	state_data: ^Scene_Harmonia_State,
 	params: Params,
 	texture: rl.RenderTexture2D,
 ) {
@@ -66,6 +71,6 @@ scene_hello_world_draw :: proc(
 	}
 }
 
-scene_hello_world_deinit :: proc(scene_data: ^Scene_Hello_World_State) {
+scene_harmonia_deinit :: proc(scene_data: ^Scene_Harmonia_State) {
 
 }

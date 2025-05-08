@@ -21,9 +21,8 @@ Scene_Manager :: struct {
 
 init_scenes :: proc(manager: ^Scene_Manager, params: Params) {
 	append(&manager.scenes, make_scene_ambrosia(params))
-	append(&manager.scenes, make_scene_hello_world(params))
-	append(&manager.scenes, make_scene_sketch(params))
-	append(&manager.scenes, make_scene_spectrum(params))
+	append(&manager.scenes, make_scene_harmonia(params))
+	append(&manager.scenes, make_scene_harpe(params))
 }
 
 deinit_scenes :: proc(manager: ^Scene_Manager) {
