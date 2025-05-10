@@ -10,95 +10,14 @@ import "core:time"
 import rl "vendor:raylib"
 import rlgl "vendor:raylib/rlgl"
 
-map_val :: proc(
-	v: $T,
-	in_start, in_end, out_start, out_end: T,
-) -> T where intrinsics.type_is_float(T) {
-	return (((out_end - out_start) * (v - in_start)) / (in_end - in_start)) + out_start
-}
+/******************************************************************************
+Colour
+******************************************************************************/
 
 rand_col_f :: proc() -> [4]f32 {
 	return {rand.float32(), rand.float32(), rand.float32(), rand.float32()}
 }
 
-/******************************************************************************
-Movement
-******************************************************************************/
-
-polar_to_cartesian :: proc(r: $T, theta: T) -> [2]T where intrinsics.type_is_float(T) {
-	return {r * math.cos(theta), r * math.sin(theta)}
-}
-
-cartesian_to_polar :: proc(coords: [2]$T) -> (r: T, theta: T) where intrinsics.type_is_float(T) {
-	r = math.sqrt(math.pow(coords.x, 2) + (math.pow(coords.y, 2)))
-	theta = math.atan2(coords.y, coords.x)
-
-	return r, theta
-}
-
-lemniscate_gerono :: proc(theta: f32) -> [2]f32 {
-	x := math.cos(theta)
-	y := math.sin(2 * theta) / 2
-	return {x, y}
-}
-
-lissajous :: proc(theta: f32) -> [2]f32 {
-	a: f32 = 3.0
-	b: f32 = 4.0
-	r: f32 = 1.570796
-
-	x := math.sin(a * theta + r)
-	y := math.sin(b * theta)
-	return {x, y}
-}
-
-interp :: proc(easing: ease.Ease, begin, end: $Value, t: $T) -> Value {
-	return begin + (end - begin) * ease.ease(easing, t)
-}
-
-lerp :: proc(begin, end: $T, t: f64) -> T {
-	return ease(ease.Ease.Linear, begin, end, t)
-}
-
-/******************************************************************************
-Timer
-******************************************************************************/
-
-Timer :: struct {
-	interval:       time.Duration,
-	prev_tick_time: time.Time,
-	is_running:     bool,
-}
-
-timer_init :: proc(timer: ^Timer, interval: time.Duration) {
-	timer.interval = interval
-}
-
-timer_start :: proc(timer: ^Timer) {
-	timer.prev_tick_time = time.now()
-	timer.is_running = true
-}
-
-timer_stop :: proc(timer: ^Timer) {
-	timer.is_running = false
-}
-
-timer_running :: proc(timer: ^Timer) -> bool {
-	return timer.is_running
-}
-
-timer_update :: proc(timer: ^Timer) -> bool {
-	if (timer.is_running) {
-		now := time.now()
-
-		if (time.diff(timer.prev_tick_time, now) > timer.interval) {
-			timer.prev_tick_time = now
-			return true
-		}
-	}
-
-	return false
-}
 
 /******************************************************************************
 LFO
@@ -169,8 +88,65 @@ lfo :: proc(
 	unreachable()
 }
 
+
 /******************************************************************************
-Shader stuff
+Movement
+******************************************************************************/
+
+lemniscate_gerono :: proc(theta: f32) -> [2]f32 {
+	x := math.cos(theta)
+	y := math.sin(2 * theta) / 2
+	return {x, y}
+}
+
+lissajous :: proc(theta: f32) -> [2]f32 {
+	a: f32 = 3.0
+	b: f32 = 4.0
+	r: f32 = 1.570796
+
+	x := math.sin(a * theta + r)
+	y := math.sin(b * theta)
+	return {x, y}
+}
+
+interp :: proc(easing: ease.Ease, begin, end: $Value, t: $T) -> Value {
+	return begin + (end - begin) * ease.ease(easing, t)
+}
+
+lerp :: proc(begin, end: $T, t: f64) -> T {
+	return ease(ease.Ease.Linear, begin, end, t)
+}
+
+
+/******************************************************************************
+Scaling / mapping
+******************************************************************************/
+
+map_val :: proc(
+	v: $T,
+	in_start, in_end, out_start, out_end: T,
+) -> T where intrinsics.type_is_float(T) {
+	return (((out_end - out_start) * (v - in_start)) / (in_end - in_start)) + out_start
+}
+
+smooth_val :: proc(current: $T, new: T, amount: f32) -> T {
+	return new * (1.0 - amount) + current * amount
+}
+
+polar_to_cartesian :: proc(r: $T, theta: T) -> [2]T where intrinsics.type_is_float(T) {
+	return {r * math.cos(theta), r * math.sin(theta)}
+}
+
+cartesian_to_polar :: proc(coords: [2]$T) -> (r: T, theta: T) where intrinsics.type_is_float(T) {
+	r = math.sqrt(math.pow(coords.x, 2) + (math.pow(coords.y, 2)))
+	theta = math.atan2(coords.y, coords.x)
+
+	return r, theta
+}
+
+
+/******************************************************************************
+Shaders/textures
 ******************************************************************************/
 
 Shader_Uniform :: union {
@@ -238,4 +214,45 @@ resize_render_texture :: proc(texture: ^rl.RenderTexture2D, width: i32, height: 
 
 	rl.SetTextureFilter(texture.texture, rl.TextureFilter.BILINEAR)
 
+}
+
+
+/******************************************************************************
+Timer
+******************************************************************************/
+
+Timer :: struct {
+	interval:       time.Duration,
+	prev_tick_time: time.Time,
+	is_running:     bool,
+}
+
+timer_init :: proc(timer: ^Timer, interval: time.Duration) {
+	timer.interval = interval
+}
+
+timer_start :: proc(timer: ^Timer) {
+	timer.prev_tick_time = time.now()
+	timer.is_running = true
+}
+
+timer_stop :: proc(timer: ^Timer) {
+	timer.is_running = false
+}
+
+timer_running :: proc(timer: ^Timer) -> bool {
+	return timer.is_running
+}
+
+timer_update :: proc(timer: ^Timer) -> bool {
+	if (timer.is_running) {
+		now := time.now()
+
+		if (time.diff(timer.prev_tick_time, now) > timer.interval) {
+			timer.prev_tick_time = now
+			return true
+		}
+	}
+
+	return false
 }

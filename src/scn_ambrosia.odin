@@ -20,6 +20,7 @@ Scene_Ambrosia_State :: struct {
 	glitch_amt:     rl.Vector2,
 	pos:            rl.Vector2,
 	lfo_start_time: time.Time,
+	drop_size:      f32,
 }
 
 make_scene_ambrosia :: proc(params: Params) -> Scene {
@@ -85,7 +86,11 @@ scene_ambrosia_draw :: proc(
 	set_shader_uniform(st8.shader, "u_glitchXY", st8.glitch_amt)
 	set_shader_uniform(st8.shader, "u_dropPos", st8.pos)
 
-	drop_size := map_val(math.pow(params.rms_smooth, 2), 0, 0.02, 0, params.width_f / 16.0)
+	drop_size := smooth_val(
+		st8.drop_size,
+		map_val(math.pow(params.rms_smooth, 1.2), 0, 0.1, 5, params.width_f / 16.0),
+		0,
+	)
 	set_shader_uniform(st8.shader, "u_dropRadius", drop_size)
 
 	if (timer_update(&st8.col_timer)) {
