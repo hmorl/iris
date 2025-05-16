@@ -20,6 +20,44 @@ rand_col_f :: proc() -> [4]f32 {
 
 
 /******************************************************************************
+Drawing
+******************************************************************************/
+
+Text_Justification :: enum {
+	Left,
+	Center,
+}
+
+draw_label :: proc(text: cstring, pos: rl.Vector2, justify: Text_Justification = .Left) {
+	padding :: 8
+	size :: 24
+
+	w := rl.MeasureText(text, size)
+
+	half_w: i32 = w / 2
+	half_h :: size / 2
+
+	x := i32(pos.x)
+	y := i32(pos.y)
+
+	switch justify {
+	case .Left:
+		rl.DrawRectangle(x - padding, y - padding, w + padding * 2, size + padding * 2, rl.BLACK)
+		rl.DrawText(text, x, y, size, rl.WHITE)
+	case .Center:
+		rl.DrawRectangle(
+			x - half_w - padding,
+			y - half_h - padding,
+			w + padding * 2,
+			size + padding * 2,
+			rl.BLACK,
+		)
+		rl.DrawText(text, x - half_w, y - half_h, size, rl.WHITE)
+	}
+}
+
+
+/******************************************************************************
 LFO
 ******************************************************************************/
 
@@ -90,6 +128,15 @@ lfo :: proc(
 
 
 /******************************************************************************
+Misc
+******************************************************************************/
+
+print :: proc(args: ..any) {
+	fmt.println(..args)
+}
+
+
+/******************************************************************************
 Movement
 ******************************************************************************/
 
@@ -146,7 +193,7 @@ cartesian_to_polar :: proc(coords: [2]$T) -> (r: T, theta: T) where intrinsics.t
 
 
 /******************************************************************************
-Shaders/textures
+Shaders / textures
 ******************************************************************************/
 
 Shader_Uniform :: union {

@@ -13,107 +13,13 @@ import "core:os"
 import "core:slice"
 import "core:strconv"
 import "core:strings"
-
+import "core:time"
 import rl "vendor:raylib"
-
-PLATFORM_RASPBERRY_PI :: #config(PLATFORM_RASPBERRY_PI, false)
 
 WINDOW_WIDTH :: 720
 WINDOW_HEIGHT :: 576
 
 TARGET_FPS :: 60
-
-Modifier :: enum u8 {
-	Shift,
-	Ctrl,
-	Alt,
-	Super,
-}
-
-Modifiers :: distinct bit_set[Modifier]
-
-Key_Combo :: struct {
-	key:       rl.KeyboardKey,
-	modifiers: Modifiers,
-}
-
-Key_Mapper :: struct {
-	mappings: map[Key_Combo]string,
-}
-
-switch_scene :: "switch_scene_"
-set_input :: "set_input_"
-
-initialize_mappings :: proc(key_mapper: ^Key_Mapper) {
-	key_mapper.mappings[{rl.KeyboardKey.ESCAPE, {}}] = "enter_global_mode"
-
-	key_mapper.mappings[{rl.KeyboardKey.Q, {}}] = switch_scene + "1"
-	key_mapper.mappings[{rl.KeyboardKey.W, {}}] = switch_scene + "2"
-	key_mapper.mappings[{rl.KeyboardKey.E, {}}] = switch_scene + "3"
-	key_mapper.mappings[{rl.KeyboardKey.R, {}}] = switch_scene + "4"
-	key_mapper.mappings[{rl.KeyboardKey.T, {}}] = switch_scene + "5"
-	key_mapper.mappings[{rl.KeyboardKey.Y, {}}] = switch_scene + "6"
-
-	key_mapper.mappings[{rl.KeyboardKey.ONE, {.Ctrl}}] = set_input + "0%"
-	key_mapper.mappings[{rl.KeyboardKey.TWO, {.Ctrl}}] = set_input + "25%"
-	key_mapper.mappings[{rl.KeyboardKey.THREE, {.Ctrl}}] = set_input + "50%"
-	key_mapper.mappings[{rl.KeyboardKey.FOUR, {.Ctrl}}] = set_input + "75%"
-	key_mapper.mappings[{rl.KeyboardKey.FIVE, {.Ctrl}}] = set_input + "100%"
-
-	key_mapper.mappings[{rl.KeyboardKey.W, {.Shift}}] = "toggle_warp"
-	key_mapper.mappings[{rl.KeyboardKey.P, {.Shift}}] = "toggle_pixelate"
-	key_mapper.mappings[{rl.KeyboardKey.ESCAPE, {.Shift}}] = "clear_fx"
-
-	key_mapper.mappings[{rl.KeyboardKey.SLASH, {.Ctrl, .Alt}}] = "toggle_fps"
-	key_mapper.mappings[{rl.KeyboardKey.C, {.Ctrl, .Alt}}] = "toggle_cursor"
-
-	key_mapper.mappings[{rl.KeyboardKey.Q, {.Ctrl, .Alt}}] = "shut_down"
-	key_mapper.mappings[{rl.KeyboardKey.P, {.Ctrl, .Alt}}] = "reboot_composite_pal"
-	key_mapper.mappings[{rl.KeyboardKey.N, {.Ctrl, .Alt}}] = "reboot_composite_ntsc"
-	key_mapper.mappings[{rl.KeyboardKey.H, {.Ctrl, .Alt}}] = "reboot_hdmi"
-
-	key_mapper.mappings[{rl.KeyboardKey.ENTER, {}}] = "enter_scene_mode"
-}
-
-get_active_modifiers :: proc() -> Modifiers {
-	active_modifiers: Modifiers
-
-	if (rl.IsKeyDown(rl.KeyboardKey.LEFT_SHIFT) || rl.IsKeyDown(rl.KeyboardKey.RIGHT_SHIFT)) {
-		active_modifiers += {.Shift}
-	}
-
-	if (rl.IsKeyDown(rl.KeyboardKey.LEFT_CONTROL) || rl.IsKeyDown(rl.KeyboardKey.RIGHT_CONTROL)) {
-		active_modifiers += {.Ctrl}
-	}
-
-	if (rl.IsKeyDown(rl.KeyboardKey.LEFT_ALT) || rl.IsKeyDown(rl.KeyboardKey.RIGHT_ALT)) {
-		active_modifiers += {.Alt}
-	}
-
-	if (rl.IsKeyDown(rl.KeyboardKey.LEFT_SUPER) || rl.IsKeyDown(rl.KeyboardKey.RIGHT_SUPER)) {
-		active_modifiers += {.Super}
-	}
-
-	return active_modifiers
-}
-
-get_triggered_actions :: proc(key_mapper: ^Key_Mapper) -> []string {
-	if (rl.GetKeyPressed() == rl.KeyboardKey.KEY_NULL) {
-		return {}
-	}
-
-	active_modifiers := get_active_modifiers()
-
-	actions: [dynamic]string
-
-	for key_combo, action_name in key_mapper.mappings {
-		if (rl.IsKeyPressed(key_combo.key) && active_modifiers == key_combo.modifiers) {
-			append(&actions, action_name)
-		}
-	}
-
-	return actions[:]
-}
 
 Quit_Action :: enum {
 	none,
@@ -121,6 +27,12 @@ Quit_Action :: enum {
 	request_reboot_composite_pal,
 	request_reboot_composite_ntsc,
 	request_reboot_hdmi,
+}
+
+Mode :: enum {
+	Global_Scene,
+	Global_Fx,
+	Scene,
 }
 
 State :: struct {
@@ -132,13 +44,12 @@ State :: struct {
 	should_exit:     bool,
 	quit_action:     Quit_Action,
 	should_quit:     bool,
+	is_first_frame:  bool,
 }
 
 main :: proc() {
 	context.logger = log.create_console_logger(log.Level.Info, log.Options{.Level})
 
-	key_mapper: Key_Mapper
-	initialize_mappings(&key_mapper)
 
 	rl.SetTraceLogLevel(rl.TraceLogLevel.WARNING)
 	rl.SetConfigFlags({.VSYNC_HINT, .WINDOW_RESIZABLE})
@@ -148,6 +59,10 @@ main :: proc() {
 	defer rl.CloseWindow()
 
 	rl.SetExitKey(rl.KeyboardKey.KEY_NULL)
+
+	key_mapper: Key_Mapper
+	key_mapper_initialize(&key_mapper)
+	key_mapper_latch_layer(&key_mapper, .Global_Scene_Mode)
 
 	audio_ctx: Audio_Context
 
@@ -169,8 +84,6 @@ main :: proc() {
 	init_scenes(&scene_manager, vis_params)
 	defer deinit_scenes(&scene_manager)
 
-	scene_manager.active_scene = &scene_manager.scenes[0]
-
 	scene_texture: rl.RenderTexture2D
 	defer rl.UnloadRenderTexture(scene_texture)
 
@@ -178,16 +91,15 @@ main :: proc() {
 	defer rl.UnloadShader(global_fx_shader)
 	set_shader_uniform(global_fx_shader, "u_pixelateAmount", 8)
 
-	first_frame := true
-
 	state: State
 	state.enable_cursor = true
 	state.audio_level = 0.5
+	is_first_frame := true
 
 	for !(rl.WindowShouldClose() || state.should_exit) {
-		defer first_frame = false
+		defer state.is_first_frame = false
 
-		if (rl.IsWindowResized() || first_frame) {
+		if (rl.IsWindowResized() || is_first_frame) {
 			rl.UnloadRenderTexture(scene_texture)
 			scene_texture = rl.LoadRenderTexture(rl.GetScreenWidth(), rl.GetScreenHeight())
 		}
@@ -219,55 +131,53 @@ main :: proc() {
 			state.quit_action = .none
 		}
 
-		if state.quit_action == .none {
-			actions := get_triggered_actions(&key_mapper)
+		if (state.quit_action == .none) {
+			actions := key_mapper_update(&key_mapper)
 
 			for a in actions {
-				if (strings.has_prefix(a, set_input)) {
-					switch strings.trim_prefix(a, set_input) {
-					case "0%":
-						state.audio_level = 0
-					case "25%":
-						state.audio_level = 0.25
-					case "50%":
-						state.audio_level = 0.5
-					case "75%":
-						state.audio_level = 0.75
-					case "100%":
-						state.audio_level = 1.0
-					}
-				} else if (strings.has_prefix(a, switch_scene)) {
-					param := strings.trim_prefix(a, switch_scene)
-					scene_num, ok := strconv.parse_int(param)
-					assert(ok)
-
-					if (scene_num <= len(scene_manager.scenes)) {
-						scene_manager.active_scene = &scene_manager.scenes[scene_num - 1]
-					}
-				} else if (a == "toggle_fps") {
-					state.show_fps = !state.show_fps
-				} else if (a == "toggle_warp") {
-					state.enable_warp = !state.enable_warp
-				} else if (a == "toggle_pixelate") {
-					state.enable_pixelate = !state.enable_pixelate
-				} else if (a == "clear_fx") {
-					state.enable_warp = false
-					state.enable_pixelate = false
-				} else if (a == "toggle_cursor") {
-					state.enable_cursor = !state.enable_cursor
-					if (state.enable_cursor) {
-						rl.EnableCursor()
-					} else {
-						rl.DisableCursor()
-					}
-				} else if a == "shut_down" {
+				#partial switch a.type {
+				case .app_shut_down:
 					state.quit_action = .quit
-				} else if a == "reboot_composite_pal" {
-					state.quit_action = .request_reboot_composite_pal
-				} else if a == "reboot_composite_ntsc" {
-					state.quit_action = .request_reboot_composite_ntsc
-				} else if a == "reboot_hdmi" {
+				case .app_reboot_hdmi:
 					state.quit_action = .request_reboot_hdmi
+				case .app_reboot_composite_ntsc:
+					state.quit_action = .request_reboot_composite_ntsc
+				case .app_reboot_composite_pal:
+					state.quit_action = .request_reboot_composite_pal
+				case .app_toggle_fps:
+					state.show_fps = !state.show_fps
+				case .app_toggle_cursor:
+					{
+						state.enable_cursor = !state.enable_cursor
+						if (state.enable_cursor) {
+							rl.EnableCursor()
+						} else {
+							rl.DisableCursor()
+						}
+					}
+				case .global_fx_mode_enter:
+					key_mapper_latch_layer(&key_mapper, .Global_Fx_Mode)
+				case .enter_scene_mode:
+					key_mapper_latch_layer(&key_mapper, .Scene_Mode)
+				case .global_scene_mode_enter:
+					key_mapper_latch_layer(&key_mapper, .Global_Scene_Mode)
+				case .fx_toggle_pixelate:
+					state.enable_pixelate = !state.enable_pixelate
+				case .fx_toggle_warp:
+					state.enable_warp = !state.enable_warp
+				case .fx_clear:
+					state.enable_pixelate = false
+					state.enable_warp = false
+				case .audio_input_level:
+					param := a.param.?
+					level := map_val(f32(param.value), 0, f32(param.range - 1), 0.0, 1.0)
+					state.audio_level = level
+				case .global_scene_switch:
+					param := a.param.?
+					scene_num := param.value
+					if (scene_num < len(scene_manager.scenes)) {
+						scene_manager.active_scene = &scene_manager.scenes[scene_num]
+					}
 				}
 			}
 		}
@@ -342,38 +252,4 @@ main :: proc() {
 	}
 
 	defer os.exit(exit_code)
-}
-
-
-Text_Justification :: enum {
-	Left,
-	Center,
-}
-
-draw_label :: proc(text: cstring, pos: rl.Vector2, justify: Text_Justification = .Left) {
-	padding :: 8
-	size :: 24
-
-	w := rl.MeasureText(text, size)
-
-	half_w: i32 = w / 2
-	half_h :: size / 2
-
-	x := i32(pos.x)
-	y := i32(pos.y)
-
-	switch justify {
-	case .Left:
-		rl.DrawRectangle(x - padding, y - padding, w + padding * 2, size + padding * 2, rl.BLACK)
-		rl.DrawText(text, x, y, size, rl.WHITE)
-	case .Center:
-		rl.DrawRectangle(
-			x - half_w - padding,
-			y - half_h - padding,
-			w + padding * 2,
-			size + padding * 2,
-			rl.BLACK,
-		)
-		rl.DrawText(text, x - half_w, y - half_h, size, rl.WHITE)
-	}
 }
