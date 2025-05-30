@@ -86,6 +86,12 @@ scene_ambrosia_draw :: proc(
 	set_shader_uniform(st8.shader, "u_glitchXY", st8.glitch_amt)
 	set_shader_uniform(st8.shader, "u_dropPos", st8.pos)
 
+	if lfo(0.03, Lfo_Shape.saw_up) > 0.95 {
+		set_shader_uniform(st8.shader, "u_sharpen", 0.7)
+	} else {
+		set_shader_uniform(st8.shader, "u_sharpen", 0.0)
+	}
+
 	drop_size := smooth_val(
 		st8.drop_size,
 		map_val(math.pow(params.rms_smooth, 1.2), 0, 0.1, 5, params.width_f / 16.0),
