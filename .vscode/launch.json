@@ -7,7 +7,7 @@
             "request": "launch",
             "program": "${workspaceFolder}/out/iris",
             "cwd": "${workspaceFolder}",
-			"preLaunchTask": "build debug",
+            "preLaunchTask": "build debug",
         }
     ]
 }
