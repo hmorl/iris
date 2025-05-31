@@ -17,18 +17,16 @@
 
 Iris is an art project & visualization system written in [Odin](https://odin-lang.org/) & [Raylib](https://www.raylib.com/), which runs on desktop systems that support openGL, including Raspberry Pi.
 
-It contains:
+It contains...
 
 - an audio engine which performs basic audio analysis (RMS, centroid, FFT)
 - scenes which are passed the audio features for visualizing
 - shaders n stuff
 - keyboard-centric control
-- decent performance for low-powered systems (RPi)
+- (hopefully) decent performance for low-powered systems (RPi)
 - (planned) automatic scene switching
 
 # Scenes
-
-Under construction :warning:
 
 Scenes are inspired by artefacts from Greek mythology.
 
@@ -36,15 +34,19 @@ Scenes are inspired by artefacts from Greek mythology.
 
 Food of the gods.
 
-<video src="https://github.com/hmorl/iris-repo-assets/raw/refs/heads/main/vid/ambrosia.mp4"></video>
+![Iris gif - AMBROSIA scene](https://github.com/hmorl/iris-repo-assets/blob/main/gif/ambrosia.gif?raw=true)
 
 ## NECKLACE OF HARMONIA
 
 Cursed jewellery.
 
+![Iris gif - HARMONIA scene](https://github.com/hmorl/iris-repo-assets/blob/main/gif/harmonia.gif?raw=true)
+
 ## HARPE
 
 Blades of sound.
+
+Under construction :warning:
 
 # Key mappings
 
@@ -54,7 +56,7 @@ There are 4 key map layers. In each layer, the alphanumeric keys are used as pri
 
 ## App shortcuts
 
-Activated with the `Ctrl+Alt` modifier
+Activated by holding the `Ctrl+Alt` modifier
 
 - Toggle FPS: `/`
 - Toggle cursor visibility: `c`
@@ -62,36 +64,50 @@ Activated with the `Ctrl+Alt` modifier
 
 ## Global Scene Mode
 
-Primarily for switching between scenes. This layer can be activated/latched on permanently with `[Alt/Option]+Enter` or `[Alt/Option]+Tab`, or temporarily by holding the `Alt/Option` key.
+Primarily for switching between scenes.
+
+Permanent latch: `[Alt/Option]+Enter` or `[Alt/Option]+Tab`  
+Temporary latch: `Alt/Option`
 
 - `[a-z]` keys switch scenes (currently only a handful do something)
 - `[1-9, 0]`for setting the audio input level (`1` is min, `0` is max, i.e. number-row-as-a-slider)
 
 ## Global FX Mode
 
-For toggling effects. This layer can be latched permanently with `Shift+Enter` or `Shift+Tab`, or temporarily by holding the `Shift` key.
+For toggling effects.
 
-- Pixelate: `p`
-- Warp: `w`
+Permanent latch: `Shift+Enter` or `Shift+Tab`  
+Temporary latch: `Shift`
+
+Actions:
+
+- Toggle pixelate: `p`
+- Toggle warp: `w`
+- ...more coming
 - Clear all: `backspace`
 
 ## Scene Mode
 
 Under construction :warning:
 
-For controlling individual scene parameters. This layer can be latched on permanently with `Ctrl+Enter` or `Ctrl+Tab`, or temporarily by holding the `Ctrl` key.
+For controlling individual scene parameters.
+
+Permanent latch: `Ctrl+Enter` or `Ctrl+Tab`  
+Temporary latch: `Ctrl`
+
+# How to build
+
+Under construction :warning:
 
 # Extending
 
-Iris can be extended with the addition of scenes: simple structs which provide a draw procedure.
+Iris can be extended with the addition of scenes: simple structs which provide a draw procedure. Scene draw procedures are passed the scene's current state, a set of params (which includes audio features) and a texture to draw to. Scenes are initialised in `init_scenes` in [`scene.odin`](https://github.com/hmorl/iris/blob/main/src/scene.odin).
 
-Scene draw procedures are passed the scene's current state, a set of params (which includes audio features) and a texture to draw to. Scenes are initialised in `init_scenes` in `scene.odin`.
-
-`scene_utils.odin` contains utilities for visualization: a stateless LFO including smoothed random, interpolators, polar/cartesian convertors & colour utilities.
+[`scene_utils.odin`](https://github.com/hmorl/iris/blob/main/src/scene_utils.odin) contains utilities for visualization: a stateless LFO including smoothed random, interpolators, polar/cartesian convertors & colour utilities.
 
 # Appearances
 
-- [One Fantastic Bind](https://www.youtube.com/watch?v=d_HVayu6qM8) (music video) - hops & Icebeing
+- [One Fantastic Bind](https://www.youtube.com/watch?v=d_HVayu6qM8) (music video) - [hops](https://hopsbrighton.bandcamp.com) & [Icebeing](https://icebeing.bandcamp.com/) (2025)
 
 # References & inspirations
 
@@ -103,3 +119,7 @@ Scene draw procedures are passed the scene's current state, a set of params (whi
 - [Hydra video synth](https://hydra.ojack.xyz) - Olivia Jack
 - [EYESY](https://www.critterandguitari.com/eyesy):tm: - Critter & Guitari
 - [Atmospheric Plugin Design](https://www.youtube.com/watch?v=ARduQFatyk0) (ADC 2024) - Syl Morrison
+
+---
+
+N.B. Iris is in its very early stages and will remain unstable/experimental for some time. I'm not actively seeking contributions but will happily answer any questions about the project.
