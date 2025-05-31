@@ -1,11 +1,19 @@
 ```
       ⌒
- ┬ ┬─┐ ┬ ┌─┐
- │ ├┬┘ │ └─┐
- ┴ ┴└─ ┴ └─┘
+ ┬ ┬──┐ ┬ ┌──┐
+ │ │  │ │ │  │
+ │ ├─┬┘ │ └──┐
+ │ │ │  │ │  │
+ ┴ ┴ └─ ┴ └──┘
 ```
 
-# Iris: a visualization technique for signals & stories
+# a visualization technique for signals & stories
+
+<!-- prettier-ignore-start -->
+| ![Iris screenshot](https://github.com/hmorl/iris-repo-assets/blob/main/img/1.png?raw=true) | ![Iris screenshot](https://github.com/hmorl/iris-repo-assets/blob/main/img/2.png?raw=true) | ![Iris screenshot](https://github.com/hmorl/iris-repo-assets/blob/main/img/6.png?raw=true) |
+|-|-|-|
+| ![Iris screenshot](https://github.com/hmorl/iris-repo-assets/blob/main/img/4.png?raw=true) | ![Iris screenshot](https://github.com/hmorl/iris-repo-assets/blob/main/img/5.png?raw=true) | ![Iris screenshot](https://github.com/hmorl/iris-repo-assets/blob/main/img/10.png?raw=true) |
+<!-- prettier-ignore-end -->
 
 Iris is an art project & visualization system written in [Odin](https://odin-lang.org/) & [Raylib](https://www.raylib.com/), which runs on desktop systems that support openGL, including Raspberry Pi.
 
@@ -15,8 +23,8 @@ It contains:
 - scenes which are passed the audio features for visualizing
 - shaders n stuff
 - keyboard-centric control
-- (planned) automatic scene switching
 - decent performance for low-powered systems (RPi)
+- (planned) automatic scene switching
 
 # Scenes
 
@@ -27,6 +35,8 @@ Scenes are inspired by artefacts from Greek mythology.
 ## AMBROSIA
 
 Food of the gods.
+
+<video src="https://github.com/hmorl/iris-repo-assets/raw/refs/heads/main/vid/ambrosia.mp4"></video>
 
 ## NECKLACE OF HARMONIA
 
@@ -81,15 +91,15 @@ Scene draw procedures are passed the scene's current state, a set of params (whi
 
 # Appearances
 
-- [One Fantastic Bind](https://www.youtube.com/watch?v=d_HVayu6qM8) - hops & Icebeing (music video)
+- [One Fantastic Bind](https://www.youtube.com/watch?v=d_HVayu6qM8) (music video) - hops & Icebeing
 
 # References & inspirations
 
-- [Coding Challenge 183: Paper Marbling Algorithm](https://www.youtube.com/watch?v=p7IGZTjC008) - Daniel Shiffman, The Coding Train
+- [Coding Challenge 183: Paper Marbling Algorithm](https://www.youtube.com/watch?v=p7IGZTjC008) - Daniel Shiffman / The Coding Train
 - [greekmythology.org](https://www.greekmythology.com/)
 - [ICEBEING](https://icebeing.bandcamp.com/)
 - [Don’t Forget the Laptop: Using Native Input Capabilities
   for Expressive Musical Control](https://www.nime.org/proceedings/2007/nime2007_164.pdf) - Rebecca Fiebrink, Ge Wang, Perry R. Cook
-- [Hydra video synth](https://hydra.ojack.xyz)
-- [EYESY:tm:](https://www.critterandguitari.com/eyesy)
-- [Atmospheric Audio Plugin Design](https://www.youtube.com/watch?v=ARduQFatyk0) - Syl Morrison
+- [Hydra video synth](https://hydra.ojack.xyz) - Olivia Jack
+- [EYESY](https://www.critterandguitari.com/eyesy):tm: - Critter & Guitari
+- [Atmospheric Plugin Design](https://www.youtube.com/watch?v=ARduQFatyk0) (ADC 2024) - Syl Morrison
