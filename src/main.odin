@@ -243,6 +243,10 @@ main :: proc() {
 	exit_code := 0
 
 	#partial switch state.quit_action {
+	case .quit:
+		if (rl.IsKeyDown(rl.KeyboardKey.LEFT_ALT) || rl.IsKeyDown(rl.KeyboardKey.RIGHT_ALT)) {
+			exit_code = 1
+		}
 	case .request_reboot_composite_pal:
 		exit_code = 21
 	case .request_reboot_composite_ntsc:
